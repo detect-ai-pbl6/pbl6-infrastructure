@@ -1,49 +1,39 @@
-resource "tls_private_key" "ssh_key" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
-
-# Create a local file for the private key
-resource "local_sensitive_file" "private_key" {
-  content         = tls_private_key.ssh_key.private_key_pem
-  filename        = "${path.module}/id_rsa"
-  file_permission = "0600"
-}
-
-# Create a local file for the public key
-resource "local_sensitive_file" "public_key" {
-  content         = tls_private_key.ssh_key.public_key_openssh
-  filename        = "${path.module}/id_rsa.pub"
-  file_permission = "0644"
-}
-
 # Create a Google Compute Engine instance
 resource "google_compute_instance" "e2_micro_instance" {
-  name         = "e2-micro-instance"
+  name         = "${var.project_name}-${terraform.workspace}-backend-spot"
   machine_type = "e2-micro"
   zone         = var.zone
 
+  # Spot instance configuration
+  scheduling {
+    preemptible                 = true
+    automatic_restart           = false
+    provisioning_model          = "SPOT"
+    instance_termination_action = "STOP" # or "DELETE" based on your needs
+  }
+
+  # Boot disk configuration
   boot_disk {
     initialize_params {
       image = "debian-cloud/debian-11"
+      type  = "pd-standard" # Use standard persistent disk for cost savings
     }
   }
-
   network_interface {
     network = "default"
 
   }
 
-  metadata = {
-    ssh-keys = "minhngoc:${tls_private_key.ssh_key.public_key_openssh}"
+  labels = {
+    environment = terraform.workspace
+    managed_by  = "terraform"
+    type        = "spot"
   }
-
-  tags = ["allow-ssh"]
 }
 
 # Firewall rule to allow SSH access
 resource "google_compute_firewall" "allow_ssh" {
-  name    = "allow-ssh"
+  name    = "${var.project_name}-${terraform.workspace}-allow-ssh"
   network = "default"
 
   allow {
@@ -51,7 +41,7 @@ resource "google_compute_firewall" "allow_ssh" {
     ports    = ["22"]
   }
 
-  source_ranges = ["0.0.0.0/0"]
+  source_ranges = ["0.0.0.0/0"] # Consider restricting this to specific IP ranges
   target_tags   = ["allow-ssh"]
 }
 
@@ -63,28 +53,17 @@ module "artifact_registry" {
   project_id    = var.project_id
   location      = var.region
   format        = "DOCKER"
-  repository_id = "${terraform.workspace}-backend-image-registry"
-}
-
-module "cloud_run" {
-  source  = "GoogleCloudPlatform/cloud-run/google"
-  version = "~> 0.10.0"
-
-  # Required variables
-  service_name = "${terraform.workspace}-backend-service"
-  project_id   = var.project_id
-  location     = var.region
-  image        = "gcr.io/cloudrun/hello"
+  repository_id = "${var.project_name}-${terraform.workspace}-backend-image-registry"
 }
 
 resource "google_compute_network" "vpc_network" {
   project                 = var.project_id
-  name                    = "${terraform.workspace}-pbl6-vpc"
+  name                    = "${var.project_name}-${terraform.workspace}-vpc"
   auto_create_subnetworks = true
 }
 
 resource "google_storage_bucket" "media_storage" {
-  name                     = var.bucket_name
+  name                     = "${var.project_name}-${terraform.workspace}-${var.bucket_name}"
   force_destroy            = true
   location                 = var.region
   storage_class            = "STANDARD"

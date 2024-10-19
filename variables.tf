@@ -1,7 +1,10 @@
+variable "project_name" {
+  type        = string
+  description = "project name"
+}
 variable "project_id" {
   type        = string
   description = "project id"
-
 }
 
 variable "region" {
@@ -12,11 +15,7 @@ variable "zone" {
   type = string
 }
 
-variable "tf_service_account" {
-  type = string
-
-}
 variable "bucket_name" {
   type = string
-
 }
+
