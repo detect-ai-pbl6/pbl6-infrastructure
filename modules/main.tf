@@ -3,6 +3,7 @@ module "media_storage" {
   bucket_name  = var.bucket_name
   region       = var.region
   project_name = var.project_name
+  project_id   = var.project_id
 }
 
 module "artifact_registry" {
@@ -218,4 +219,16 @@ module "pg" {
   user_name     = var.db_user
   user_password = var.db_password
 
+}
+
+module "secrets" {
+  source       = "./secret"
+  project_name = var.project_name
+
+  database_host     = module.pg.private_ip_address
+  database_user     = var.db_user
+  database_name     = var.db_name
+  database_password = var.db_password
+
+  depends_on = [module.pg]
 }
