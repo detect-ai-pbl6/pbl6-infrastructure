@@ -56,7 +56,7 @@ resource "google_compute_firewall" "nat_firewall" {
 
   source_ranges = ["0.0.0.0/0"] # Modify for security as needed
 }
-resource "google_compute_firewall" "allow_tcp_udp_icmp_public_to_private" {
+resource "google_compute_firewall" "allow_all_from_public_subnet_to_private_subnet" {
   name    = "${var.project_name}-${terraform.workspace}-allow-tcp-udp-icmp-public-to-private"
   network = module.vpc.network_name
 
@@ -78,10 +78,14 @@ resource "google_compute_firewall" "allow_tcp_udp_icmp_public_to_private" {
   target_tags   = ["private-access"] # Apply this to instances in the private subnet
 
   depends_on = [module.vpc.network_name]
+
+  lifecycle {
+    create_before_destroy = false
+  }
 }
 
 # Firewall rule to allow TCP, UDP, and ICMP from private subnet to public subnet
-resource "google_compute_firewall" "allow_tcp_udp_icmp_private_to_public" {
+resource "google_compute_firewall" "allow_all_private_subnet_to_public_subnet" {
   name    = "${var.project_name}-${terraform.workspace}-allow-tcp-udp-icmp-private-to-public"
   network = module.vpc.network_name
 
@@ -103,6 +107,10 @@ resource "google_compute_firewall" "allow_tcp_udp_icmp_private_to_public" {
   target_tags   = ["public-access"] # Apply this to instances in the public subnet
 
   depends_on = [module.vpc.network_name]
+
+  lifecycle {
+    create_before_destroy = false
+  }
 }
 module "backend_instances" {
   source           = "./vm"
@@ -116,26 +124,6 @@ module "backend_instances" {
   region           = var.region
 }
 
-module "database" {
-  source           = "./vm"
-  number_instances = 1
-  instance_name    = "${var.project_name}-${terraform.workspace}-db"
-  is_spot          = true
-  zone             = var.zone
-  network          = module.vpc.network_name
-  sub_network      = module.vpc.private_subnet_name
-  tags             = ["allow-ssh", "private-subnet", "private-access", "public-access"]
-  region           = var.region
-  metadata = {
-    DB_USER     = "minhngoc"
-    DB_PASSWORD = "minhngoc"
-    DB_NAME     = "minhngoc"
-  }
-  startup_script = templatefile("${path.module}/./cloud-init/install_postgres.sh", {
-    pg_hba_file = templatefile("${path.module}/./cloud-init/pg_hba.conf", { allowed_ip = "0.0.0.0/0" }),
-  })
-}
-
 resource "google_compute_address" "nat_instance" {
   name   = "nat-instance"
   region = var.region
@@ -145,6 +133,7 @@ module "nat_instance" {
   source         = "./nat-instance"
   network        = module.vpc.network_name
   subnet         = module.vpc.public_subnet_name
+  project_name   = var.project_name
   address        = google_compute_address.nat_instance.address // Required
   zone           = var.zone                                    // Required
   disk_type      = "pd-standard"                               // Optional
@@ -164,4 +153,69 @@ resource "google_compute_route" "private_to_nat" {
     module.vpc.private_subnet_name,
     module.vpc.public_subnet_name
   ]
+}
+
+resource "google_compute_global_address" "private_ip_address" {
+  name          = "private-ip"
+  purpose       = "VPC_PEERING"
+  address_type  = "INTERNAL"
+  prefix_length = 16
+  network       = module.vpc.network_name
+  project       = var.project_id
+}
+
+resource "google_service_networking_connection" "private_vpc_connection" {
+  network                 = module.vpc.network_name
+  service                 = "servicenetworking.googleapis.com"
+  reserved_peering_ranges = [google_compute_global_address.private_ip_address.name]
+}
+
+module "pg" {
+  source  = "terraform-google-modules/sql-db/google//modules/postgresql"
+  version = "~> 22.1"
+
+  name                 = "${var.project_name}-${terraform.workspace}-db"
+  random_instance_name = true
+  project_id           = var.project_id
+  database_version     = "POSTGRES_16"
+  region               = var.region
+
+  tier                            = var.db_tier
+  zone                            = var.zone
+  availability_type               = "ZONAL"
+  maintenance_window_day          = 7
+  maintenance_window_hour         = 12
+  maintenance_window_update_track = "stable"
+
+  deletion_protection = false
+
+  database_flags = [{ name = "autovacuum", value = "off" }]
+
+  ip_configuration = {
+    ipv4_enabled    = true
+    require_ssl     = true
+    private_network = "projects/${var.project_id}/global/networks/${module.vpc.network_name}"
+
+    allocated_ip_range = null
+  }
+
+  backup_configuration = {
+    enabled                        = false
+    start_time                     = "20:55"
+    location                       = null
+    point_in_time_recovery_enabled = false
+    transaction_log_retention_days = null
+    retained_backups               = 365
+    retention_unit                 = "COUNT"
+  }
+
+
+  db_name      = var.db_name
+  db_charset   = "UTF8"
+  db_collation = "en_US.UTF8"
+
+
+  user_name     = var.db_user
+  user_password = var.db_password
+
 }

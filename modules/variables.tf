@@ -20,3 +20,21 @@ variable "project_id" {
 variable "zone" {
   type = string
 }
+
+variable "db_tier" {
+  type        = string
+  description = "db tier"
+}
+variable "db_user" {
+  type        = string
+  description = "database user"
+}
+variable "db_name" {
+  type        = string
+  description = "database name"
+}
+
+variable "db_password" {
+  type        = string
+  description = "database password"
+}

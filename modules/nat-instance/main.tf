@@ -1,5 +1,5 @@
 resource "random_id" "instance_suffix" {
-  byte_length = 2
+  byte_length = 4
   keepers = {
     zone                 = var.zone
     address              = var.address
@@ -12,7 +12,7 @@ resource "random_id" "instance_suffix" {
 }
 
 resource "random_id" "address_suffix" {
-  byte_length = 2
+  byte_length = 4
   keepers = {
     region = local.region
   }
