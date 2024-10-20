@@ -3,12 +3,13 @@ variable "project_id" {
   description = "project id"
 }
 
-variable "instance_group" {
-  type        = any
-  description = "instance group"
-}
 
 variable "project_name" {
   type        = string
   description = "project name"
+}
+
+variable "neg_id" {
+  type        = string
+  description = "network endpoint group id"
 }
