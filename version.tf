@@ -1,8 +1,8 @@
 terraform {
-  required_version = ">=0.12"
+  required_version = ">= 1.3.0"
+
   backend "gcs" {
-    bucket = "test-tf-state-bucket-minhngoc"
-    # impersonate_service_account = "test-service-account@engaged-reducer-436815-p9.iam.gserviceaccount.com"
+    bucket = "pbl6-dev-tf-state-bucket"
     prefix = "tstatic.tfstate.d"
   }
   required_providers {
