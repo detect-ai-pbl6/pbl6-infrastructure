@@ -251,7 +251,8 @@ module "secrets" {
   database_name     = var.db_name
   database_password = var.db_password
 
-  depends_on = [module.pg]
+  bucket_name = module.media_storage.bucket_name
+  depends_on  = [module.pg]
 }
 
 module "load_balance" {
@@ -259,4 +260,15 @@ module "load_balance" {
   project_id     = var.project_id
   instance_group = module.backend_instances.instance_group
   project_name   = var.project_name
+}
+
+module "cloudrun_backend" {
+  source       = "./cloudrun"
+  envs_data    = module.secrets.secrets_data
+  project_id   = var.project_id
+  project_name = var.project_name
+  network_id   = module.vpc.network_id
+  region       = var.region
+
+  depends_on = [module.secrets]
 }
