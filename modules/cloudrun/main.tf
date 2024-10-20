@@ -46,9 +46,10 @@ resource "google_project_iam_member" "cloudrun_roles" {
 
 
 resource "google_cloud_run_v2_service" "service" {
-  name     = "${local.name_prefix}-cloudrun-backend"
-  location = var.region
-
+  provider             = google-beta
+  name                 = "${local.name_prefix}-cloudrun-backend"
+  location             = var.region
+  default_uri_disabled = true
   template {
     containers {
       image = "asia-southeast1-docker.pkg.dev/pbl6-439109/pbl6-dev-backend-image-registry/dev-backend-image@sha256:80fc169bfac91fbd14333ba3f214c91c0ffb66fafa5486205270a9edc19a7ebc"
@@ -80,6 +81,8 @@ resource "google_cloud_run_v2_service" "service" {
       egress    = "PRIVATE_RANGES_ONLY"
     }
   }
+  ingress      = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+  launch_stage = "BETA"
 }
 
 
@@ -99,3 +102,14 @@ resource "google_cloud_run_service_iam_policy" "noauth" {
 
   policy_data = data.google_iam_policy.noauth.policy_data
 }
+
+resource "google_compute_region_network_endpoint_group" "serverless_neg" {
+  name                  = "${local.name_prefix}-neg"
+  network_endpoint_type = "SERVERLESS"
+  region                = var.region
+
+  cloud_run {
+    service = google_cloud_run_v2_service.service.name
+  }
+}
+

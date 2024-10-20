@@ -55,27 +55,6 @@ resource "google_compute_firewall" "allow_ssh" {
   target_tags   = ["allow-ssh"]
 }
 
-resource "google_compute_firewall" "nat_firewall" {
-  name    = "allow-nat"
-  network = module.vpc.network_name
-
-  allow {
-    protocol = "tcp"
-    ports    = ["22"] # Allow SSH
-  }
-
-  allow {
-    protocol = "udp"
-    ports    = ["53"] # Allow DNS
-  }
-
-  allow {
-    protocol = "tcp"
-    ports    = ["80", "443"] # Allow HTTP/HTTPS
-  }
-
-  source_ranges = ["0.0.0.0/0"] # Modify for security as needed
-}
 resource "google_compute_firewall" "allow_all_from_public_subnet_to_private_subnet" {
   name    = "${var.project_name}-${terraform.workspace}-allow-tcp-udp-icmp-public-to-private"
   network = module.vpc.network_name
@@ -132,50 +111,74 @@ resource "google_compute_firewall" "allow_all_private_subnet_to_public_subnet" {
     create_before_destroy = false
   }
 }
-module "backend_instances" {
-  source           = "./vm"
-  number_instances = 1
-  instance_name    = "${var.project_name}-${terraform.workspace}-backend"
-  is_spot          = true
-  zone             = var.zone
-  network          = module.vpc.network_name
-  sub_network      = module.vpc.private_subnet_name
-  tags             = ["allow-ssh", "private-subnet", "private-access", "public-access", "backend-service"]
-  region           = var.region
-  network_id       = module.vpc.network_id
-  project_id       = var.project_id
-}
 
-resource "google_compute_address" "nat_instance" {
-  name   = "nat-instance"
-  region = var.region
-}
+### NAT INSTANCE #####
 
-module "nat_instance" {
-  source         = "./nat-instance"
-  network        = module.vpc.network_name
-  subnet         = module.vpc.public_subnet_name
-  project_name   = var.project_name
-  address        = google_compute_address.nat_instance.address // Required
-  zone           = var.zone                                    // Required
-  disk_type      = "pd-standard"                               // Optional
-  machine_type   = "e2-micro"                                  // Optional
-  route_priority = 900                                         // Optional
-}
+# resource "google_compute_firewall" "nat_firewall" {
+#   name    = "allow-nat"
+#   network = module.vpc.network_name
 
-resource "google_compute_route" "private_to_nat" {
-  name        = "${var.project_name}-${terraform.workspace}-private-to-nat"
-  network     = module.vpc.network_name
-  dest_range  = "0.0.0.0/0"
-  priority    = 800
-  tags        = ["private-subnet"]
-  next_hop_ip = module.nat_instance.address
+#   allow {
+#     protocol = "tcp"
+#     ports    = ["22"] # Allow SSH
+#   }
 
-  depends_on = [
-    module.vpc.private_subnet_name,
-    module.vpc.public_subnet_name
-  ]
-}
+#   allow {
+#     protocol = "udp"
+#     ports    = ["53"] # Allow DNS
+#   }
+
+#   allow {
+#     protocol = "tcp"
+#     ports    = ["80", "443"] # Allow HTTP/HTTPS
+#   }
+
+#   source_ranges = ["0.0.0.0/0"] # Modify for security as needed
+# }
+# module "backend_instances" {
+#   source           = "./vm"
+#   number_instances = 1
+#   instance_name    = "${var.project_name}-${terraform.workspace}-backend"
+#   is_spot          = true
+#   zone             = var.zone
+#   network          = module.vpc.network_name
+#   sub_network      = module.vpc.private_subnet_name
+#   tags             = ["allow-ssh", "private-subnet", "private-access", "public-access", "backend-service"]
+#   region           = var.region
+#   network_id       = module.vpc.network_id
+#   project_id       = var.project_id
+# }
+
+# resource "google_compute_address" "nat_instance" {
+#   name   = "nat-instance"
+#   region = var.region
+# }
+
+# module "nat_instance" {
+#   source         = "./nat-instance"
+#   network        = module.vpc.network_name
+#   subnet         = module.vpc.public_subnet_name
+#   project_name   = var.project_name
+#   address        = google_compute_address.nat_instance.address // Required
+#   zone           = var.zone                                    // Required
+#   disk_type      = "pd-standard"                               // Optional
+#   machine_type   = "e2-micro"                                  // Optional
+#   route_priority = 900                                         // Optional
+# }
+
+# resource "google_compute_route" "private_to_nat" {
+#   name        = "${var.project_name}-${terraform.workspace}-private-to-nat"
+#   network     = module.vpc.network_name
+#   dest_range  = "0.0.0.0/0"
+#   priority    = 800
+#   tags        = ["private-subnet"]
+#   next_hop_ip = module.nat_instance.address
+
+#   depends_on = [
+#     module.vpc.private_subnet_name,
+#     module.vpc.public_subnet_name
+#   ]
+# }
 
 resource "google_compute_global_address" "private_ip_address" {
   name          = "private-ip"
@@ -255,12 +258,7 @@ module "secrets" {
   depends_on  = [module.pg]
 }
 
-module "load_balance" {
-  source         = "./load-balance"
-  project_id     = var.project_id
-  instance_group = module.backend_instances.instance_group
-  project_name   = var.project_name
-}
+
 
 module "cloudrun_backend" {
   source       = "./cloudrun"
@@ -271,4 +269,12 @@ module "cloudrun_backend" {
   region       = var.region
 
   depends_on = [module.secrets]
+}
+
+module "load_balance" {
+  source       = "./load-balance"
+  project_id   = var.project_id
+  project_name = var.project_name
+  neg_id       = module.cloudrun_backend.neg_id
+  depends_on   = [module.cloudrun_backend]
 }
