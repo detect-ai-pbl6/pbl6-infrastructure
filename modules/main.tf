@@ -1,9 +1,28 @@
+resource "google_service_account" "storage_account" {
+  account_id   = "${var.project_name}-${terraform.workspace}-sa-id"
+  display_name = "${var.project_name}-${terraform.workspace}-sa"
+  description  = "Service Account with full storage access"
+}
+
+# Grant storage roles
+resource "google_project_iam_member" "storage_roles" {
+  for_each = toset([
+    "roles/storage.admin",
+    "roles/artifactregistry.reader",
+    "roles/artifactregistry.writer"
+  ])
+
+  project = var.project_id
+  role    = each.value
+  member  = "serviceAccount:${google_service_account.storage_account.email}"
+}
+
+
 module "media_storage" {
   source       = "./media-storage"
   bucket_name  = var.bucket_name
   region       = var.region
   project_name = var.project_name
-  project_id   = var.project_id
 }
 
 module "artifact_registry" {
@@ -121,8 +140,10 @@ module "backend_instances" {
   zone             = var.zone
   network          = module.vpc.network_name
   sub_network      = module.vpc.private_subnet_name
-  tags             = ["allow-ssh", "private-subnet", "private-access", "public-access"]
+  tags             = ["allow-ssh", "private-subnet", "private-access", "public-access", "backend-service"]
   region           = var.region
+  network_id       = module.vpc.network_id
+  project_id       = var.project_id
 }
 
 resource "google_compute_address" "nat_instance" {
@@ -231,4 +252,11 @@ module "secrets" {
   database_password = var.db_password
 
   depends_on = [module.pg]
+}
+
+module "load_balance" {
+  source         = "./load-balance"
+  project_id     = var.project_id
+  instance_group = module.backend_instances.instance_group
+  project_name   = var.project_name
 }

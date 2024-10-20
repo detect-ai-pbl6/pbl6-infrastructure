@@ -50,3 +50,13 @@ variable "metadata" {
   type        = map(string)
   default     = {}
 }
+
+variable "network_id" {
+  type        = string
+  description = "network id"
+}
+
+variable "project_id" {
+  type        = string
+  description = "project id"
+}
