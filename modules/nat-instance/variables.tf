@@ -69,3 +69,8 @@ variable "subnet" {
   type        = string
   description = "The duration (in seconds) to wait for the NAT instance to finish starting up."
 }
+
+variable "project_name" {
+  type        = string
+  description = "project name"
+}

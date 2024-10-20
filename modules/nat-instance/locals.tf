@@ -12,7 +12,7 @@ locals {
 
   startup_script = file("${path.module}/startup_script.sh")
 
-  instance_name = "nat-instance-${local.region}-${random_id.instance_suffix.hex}"
+  instance_name = "${var.project_name}-${terraform.workspace}-nat-instance-${random_id.instance_suffix.hex}"
 
   instance_metadata = {
     startup-script-iptables-sh = file("${path.module}/startup_script_iptables.sh")

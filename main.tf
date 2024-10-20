@@ -5,4 +5,8 @@ module "services" {
   region       = var.region
   project_id   = var.project_id
   zone         = var.zone
+  db_name      = var.db_name
+  db_password  = var.db_password
+  db_tier      = var.db_tier
+  db_user      = var.db_user
 }
