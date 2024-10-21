@@ -280,3 +280,58 @@ module "load_balance" {
   neg_id       = module.cloudrun_backend.neg_id
   depends_on   = [module.cloudrun_backend]
 }
+
+resource "google_service_account" "github_actions" {
+  account_id   = "github-actions-sa"
+  display_name = "GitHub Actions Service Account"
+  description  = "Service Account for GitHub Actions Workload Identity"
+  project      = var.project_id
+}
+
+# Create Workload Identity Pool
+resource "google_iam_workload_identity_pool" "github_pool" {
+  workload_identity_pool_id = "github-pool"
+  display_name              = "GitHub Actions Pool"
+  description               = "Identity pool for GitHub Actions"
+}
+
+# Create Workload Identity Pool Provider
+resource "google_iam_workload_identity_pool_provider" "github_provider" {
+  workload_identity_pool_id          = google_iam_workload_identity_pool.github_pool.workload_identity_pool_id
+  workload_identity_pool_provider_id = "github-provider"
+  display_name                       = "GitHub Actions Provider"
+  description                        = "OIDC identity pool provider for GitHub Actions"
+
+  attribute_mapping = {
+    "google.subject"  = "assertion.sub"
+    "attribute.actor" = "assertion.actor"
+    "attribute.aud"   = "assertion.aud"
+    # "attribute.repository" = "assertion.repository"
+  }
+
+  oidc {
+    issuer_uri = "https://token.actions.githubusercontent.com"
+    # allowed_audiences = ["https://github.com/${var.github_repo}"]
+  }
+
+  attribute_condition = "assertion.repository_owner=='detect-ai-pbl6'"
+}
+
+# IAM binding to allow GitHub to impersonate service account
+resource "google_service_account_iam_binding" "workload_identity_binding" {
+  service_account_id = google_service_account.github_actions.name
+  role               = "roles/iam.workloadIdentityUser"
+
+  members = [
+    "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github_pool.name}/attribute.repository/${var.github_repo}"
+  ]
+}
+
+# Add IAM roles to the service account
+resource "google_project_iam_member" "service_account_roles" {
+  for_each = toset(var.service_account_roles)
+
+  project = var.project_id
+  role    = each.value
+  member  = "serviceAccount:${google_service_account.github_actions.email}"
+}
