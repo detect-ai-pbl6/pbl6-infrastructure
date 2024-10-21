@@ -27,3 +27,8 @@ variable "bucket_name" {
   type        = string
   description = "bucket name"
 }
+
+variable "secret_key" {
+  type        = string
+  description = "server secret key"
+}

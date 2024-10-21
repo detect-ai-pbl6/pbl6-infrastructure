@@ -254,6 +254,8 @@ module "secrets" {
   database_name     = var.db_name
   database_password = var.db_password
 
+  secret_key = var.secret_key
+
   bucket_name = module.media_storage.bucket_name
   depends_on  = [module.pg]
 }
