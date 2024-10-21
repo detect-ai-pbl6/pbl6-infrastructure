@@ -6,6 +6,7 @@ locals {
     "db-password"     = var.database_password
     "db-name"         = var.database_name
     "gcp-bucket-name" = var.bucket_name
+    "host"            = "http://34.149.131.52/"
 
   }
 }
