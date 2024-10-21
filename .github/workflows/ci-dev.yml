@@ -1,16 +1,15 @@
-name: 'CI-dev'
+name: 'CD-dev'
 
 on:
-  pull_request:
+  push:
     branches: [ "dev" ]
 
 permissions:
   contents: read
-  pull-requests: write
-  
+
 jobs:
   terraform:
-    name: 'Terraform CI'
+    name: 'Terraform CD'
     runs-on: ubuntu-latest
     env:
       TF_WORKSPACE: dev
@@ -37,27 +36,18 @@ jobs:
       uses: hashicorp/setup-terraform@v3
       with:
         terraform_version: "1.9.8"
-
-    - name: Terraform Format
-      id: fmt
-      run: terraform fmt -check -recursive
-      continue-on-error: true
-
+    # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
     - name: Terraform Init
-      id: init
+      id : init
       run: terraform init
       env:
         GOOGLE_CREDENTIALS: ${{ env.GOOGLE_CREDENTIALS }} 
 
-    # Generates an execution plan for Terraform
     - name: Terraform Plan
-      id: plan
-      run: terraform plan -input=false -out .planfile         
+      run: terraform plan -input=false
       env:
         GOOGLE_CREDENTIALS: ${{ env.GOOGLE_CREDENTIALS }}
-        
-    - name: Post PR comment
-      uses: borchero/terraform-plan-comment@v2
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        planfile: .planfile
+    - name: Terraform Apply
+      run: terraform apply -auto-approve -input=false
+      env:
+        GOOGLE_CREDENTIALS: ${{ env.GOOGLE_CREDENTIALS }}
