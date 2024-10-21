@@ -38,3 +38,8 @@ variable "db_password" {
   type        = string
   description = "database password"
 }
+
+variable "secret_key" {
+  type        = string
+  description = "server secret key"
+}

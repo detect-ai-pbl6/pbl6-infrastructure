@@ -9,4 +9,5 @@ module "services" {
   db_password  = var.db_password
   db_tier      = var.db_tier
   db_user      = var.db_user
+  secret_key   = var.secret_key
 }
