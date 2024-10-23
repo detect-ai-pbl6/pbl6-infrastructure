@@ -32,3 +32,13 @@ variable "secret_key" {
   type        = string
   description = "server secret key"
 }
+
+variable "cors_allowed_origins" {
+  type        = string
+  description = "server allow cors for origins"
+}
+
+variable "host" {
+  type        = string
+  description = "server host"
+}

@@ -17,6 +17,10 @@ resource "google_project_iam_member" "storage_roles" {
   member  = "serviceAccount:${google_service_account.storage_account.email}"
 }
 
+module "available-services" {
+  source     = "./available-services"
+  project_id = var.project_id
+}
 
 module "media_storage" {
   source       = "./media-storage"
@@ -245,6 +249,92 @@ module "pg" {
 
 }
 
+
+
+
+module "cloudrun_backend" {
+  source                    = "./cloudrun"
+  envs_data                 = module.secrets.secrets_data
+  project_id                = var.project_id
+  project_name              = var.project_name
+  network_id                = module.vpc.network_id
+  region                    = var.region
+  cloud_sql_connection_name = module.pg.instance_connection_name
+
+  depends_on = [module.secrets, module.pg]
+}
+
+module "load_balance" {
+  source       = "./load-balance"
+  project_id   = var.project_id
+  project_name = var.project_name
+  neg_id       = module.cloudrun_backend.neg_id
+  depends_on   = [module.cloudrun_backend]
+}
+
+# resource "google_pubsub_topic" "billing_report_topic" {
+#   name = "daily-billing-report"
+# }
+
+
+# resource "google_storage_bucket" "function_bucket" {
+#   name     = "${var.project_id}-functions"
+#   location = "US"
+# }
+
+# resource "google_cloudfunctions_function" "billing_report_function" {
+#   name        = "daily-billing-report-function"
+#   description = "Sends daily billing reports"
+#   runtime     = "python310" # Adjust based on your code
+
+#   available_memory_mb   = 128
+#   source_archive_bucket = google_storage_bucket.function_bucket.name
+#   source_archive_object = google_storage_bucket_object.function_code.name
+#   entry_point           = "send_daily_billing_report"
+
+#   event_trigger {
+#     event_type = "google.pubsub.topic.publish"
+#     resource   = google_pubsub_topic.billing_report_topic.id
+#   }
+
+#   environment_variables = {
+#     PROJECT_ID = var.project_id
+#   }
+# }
+
+# resource "google_storage_bucket_object" "function_code" {
+#   name   = "function-source.zip"
+#   bucket = google_storage_bucket.function_bucket.name
+#   source = "path/to/function-source.zip" # Path to your function code
+# }
+
+module "dns_public_zone" {
+  source  = "terraform-google-modules/cloud-dns/google"
+  version = "~> 5.0"
+
+  project_id = var.project_id
+  type       = "public"
+  name       = "${var.project_name}-${terraform.workspace}-public-dns-zone"
+  domain     = "${var.domain_name}."
+
+  enable_logging = true
+
+  recordsets = [
+    {
+      name    = ""
+      type    = "A"
+      ttl     = 300
+      records = [module.load_balance.external_ip]
+    },
+    {
+      name    = "www"
+      type    = "CNAME"
+      ttl     = 300
+      records = ["www.${var.domain_name}."]
+    },
+  ]
+}
+
 module "secrets" {
   source       = "./secret"
   project_name = var.project_name
@@ -254,29 +344,10 @@ module "secrets" {
   database_name     = var.db_name
   database_password = var.db_password
 
-  secret_key = var.secret_key
+  secret_key           = var.secret_key
+  cors_allowed_origins = var.cors_allowed_origins
+  host                 = "http://${var.domain_name}/"
 
   bucket_name = module.media_storage.bucket_name
   depends_on  = [module.pg]
-}
-
-
-
-module "cloudrun_backend" {
-  source       = "./cloudrun"
-  envs_data    = module.secrets.secrets_data
-  project_id   = var.project_id
-  project_name = var.project_name
-  network_id   = module.vpc.network_id
-  region       = var.region
-
-  depends_on = [module.secrets]
-}
-
-module "load_balance" {
-  source       = "./load-balance"
-  project_id   = var.project_id
-  project_name = var.project_name
-  neg_id       = module.cloudrun_backend.neg_id
-  depends_on   = [module.cloudrun_backend]
 }
