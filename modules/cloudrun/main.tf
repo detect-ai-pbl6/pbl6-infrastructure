@@ -52,6 +52,7 @@ resource "google_cloud_run_v2_service" "service" {
   location             = var.region
   default_uri_disabled = true
   template {
+
     containers {
       image = "asia-southeast1-docker.pkg.dev/pbl6-439109/pbl6-dev-backend-image-registry/dev-backend-image:latest"
       ports {
@@ -84,6 +85,7 @@ resource "google_cloud_run_v2_service" "service" {
   }
   ingress      = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
   launch_stage = "BETA"
+
 }
 
 

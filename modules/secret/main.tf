@@ -1,14 +1,14 @@
 locals {
   secret_name_prefix = "${var.project_name}-${terraform.workspace}-secrets"
   secrets = {
-    "db-host"         = var.database_host
-    "db-username"     = var.database_user
-    "db-password"     = var.database_password
-    "db-name"         = var.database_name
-    "gcp-bucket-name" = var.bucket_name
-    "host"            = "http://34.149.131.52/"
-    "secret-key"      = var.secret_key
-
+    "db-host"              = var.database_host
+    "db-username"          = var.database_user
+    "db-password"          = var.database_password
+    "db-name"              = var.database_name
+    "gcp-bucket-name"      = var.bucket_name
+    "host"                 = var.host
+    "secret-key"           = var.secret_key
+    "cors-allowed-origins" = var.cors_allowed_origins
   }
 }
 

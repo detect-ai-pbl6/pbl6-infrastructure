@@ -68,3 +68,8 @@ resource "google_storage_bucket" "default" {
     google_kms_crypto_key_iam_member.crypto_key_access
   ]
 }
+
+# TODO: oidc set up
+
+
+# TODO: domain set up
