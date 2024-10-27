@@ -13,3 +13,8 @@ variable "neg_id" {
   type        = string
   description = "network endpoint group id"
 }
+
+variable "domain_name" {
+  type        = string
+  description = "domain name"
+}
