@@ -42,3 +42,13 @@ variable "host" {
   type        = string
   description = "server host"
 }
+
+variable "private_key" {
+  type        = string
+  description = "private name"
+}
+
+variable "public_key" {
+  type        = string
+  description = "public name"
+}

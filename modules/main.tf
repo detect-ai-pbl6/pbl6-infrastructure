@@ -269,6 +269,7 @@ module "load_balance" {
   project_id   = var.project_id
   project_name = var.project_name
   neg_id       = module.cloudrun_backend.neg_id
+  domain_name  = var.domain_name
   depends_on   = [module.cloudrun_backend]
 }
 
@@ -346,7 +347,9 @@ module "secrets" {
 
   secret_key           = var.secret_key
   cors_allowed_origins = var.cors_allowed_origins
-  host                 = "http://${var.domain_name}/"
+  host                 = "https://${var.domain_name}/"
+  private_key          = var.private_key
+  public_key           = var.public_key
 
   bucket_name = module.media_storage.bucket_name
   depends_on  = [module.pg]

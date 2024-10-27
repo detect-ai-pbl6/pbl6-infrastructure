@@ -52,3 +52,13 @@ variable "domain_name" {
   type        = string
   description = "domain name"
 }
+
+variable "private_key" {
+  type        = string
+  description = "private name"
+}
+
+variable "public_key" {
+  type        = string
+  description = "public name"
+}

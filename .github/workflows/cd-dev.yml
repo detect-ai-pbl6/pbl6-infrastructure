@@ -25,6 +25,8 @@ jobs:
       TF_VAR_secret_key: ${{ secrets.DEV_SECRET_KEY }}
       TF_VAR_cors_allowed_origins: ${{ vars.DEV_CORS_ALLOWED_ORIGINS }}
       TF_VAR_domain_name: ${{ vars.DEV_DOMAIN_NAME }}
+      TF_VAR_private_key: ${{ secrets.DEV_PRIVATE_KEY }}
+      TF_VAR_public_key: ${{ secrets.DEV_PUBLIC_KEY }}
       GOOGLE_CREDENTIALS: ${{ secrets.DEV_GOOGLE_CREDENTIALS }} 
 
 
