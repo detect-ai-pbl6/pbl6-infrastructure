@@ -9,8 +9,11 @@ locals {
     "host"                 = var.host
     "secret-key"           = var.secret_key
     "cors-allowed-origins" = var.cors_allowed_origins
+    "csrf-trusted-origins" = var.csrf_trusted_origins
     "private-key"          = var.private_key
     "public-key"           = var.public_key
+    "google-client-id"     = var.gcp_client_id
+    "google-secret"        = var.gcp_secret
   }
 }
 

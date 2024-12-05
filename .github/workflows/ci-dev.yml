@@ -28,6 +28,9 @@ jobs:
       TF_VAR_domain_name: ${{ vars.DEV_DOMAIN_NAME }}
       TF_VAR_private_key: ${{ secrets.DEV_PRIVATE_KEY }}
       TF_VAR_public_key: ${{ secrets.DEV_PUBLIC_KEY }}
+      TF_VAR_csrf_trusted_origins: ${{ vars.DEV_CSRF_TRUSTED_ORIGINS }}
+      TF_VAR_gcp_client_id: ${{ secrets.DEV_GCP_CLIENT_ID }}
+      TF_VAR_gcp_secret: ${{ secrets.DEV_GCP_SECRET }}
       GOOGLE_CREDENTIALS: ${{ secrets.DEV_GOOGLE_CREDENTIALS }} 
 
 

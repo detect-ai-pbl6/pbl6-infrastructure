@@ -347,9 +347,13 @@ module "secrets" {
 
   secret_key           = var.secret_key
   cors_allowed_origins = var.cors_allowed_origins
+  csrf_trusted_origins = var.csrf_trusted_origins
   host                 = "https://${var.domain_name}/"
   private_key          = var.private_key
   public_key           = var.public_key
+
+  gcp_client_id = var.gcp_client_id
+  gcp_secret    = var.gcp_secret
 
   bucket_name = module.media_storage.bucket_name
   depends_on  = [module.pg]
