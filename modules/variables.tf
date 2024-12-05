@@ -49,6 +49,11 @@ variable "cors_allowed_origins" {
   description = "server allow cors for origins"
 }
 
+variable "csrf_trusted_origins" {
+  type        = string
+  description = "server bypass csrf for origins"
+}
+
 variable "domain_name" {
   type        = string
   description = "domain name"
@@ -63,4 +68,14 @@ variable "private_key" {
 variable "public_key" {
   type        = string
   description = "public name"
+}
+
+variable "gcp_client_id" {
+  type        = string
+  description = "gcp app client id"
+}
+
+variable "gcp_secret" {
+  type        = string
+  description = "gcp app secret"
 }
