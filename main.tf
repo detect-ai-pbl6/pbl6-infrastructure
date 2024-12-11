@@ -1,6 +1,5 @@
 module "services" {
   source               = "./modules"
-  bucket_name          = var.bucket_name
   project_name         = var.project_name
   region               = var.region
   project_id           = var.project_id
@@ -17,4 +16,11 @@ module "services" {
   public_key           = var.public_key
   gcp_client_id        = var.gcp_client_id
   gcp_secret           = var.gcp_secret
+  superuser_email      = var.superuser_email
+  superuser_password   = var.superuser_password
+  admin_origin         = var.admin_origin
+
+  rabbitmq_password = var.rabbitmq_password
+  rabbitmq_username = var.rabbitmq_username
+  rabbitmq_vhost    = var.rabbitmq_vhost
 }
