@@ -37,7 +37,7 @@ variable "cors_max_age" {
 }
 
 variable "versioning" {
-  description = "Maximum age for CORS preflight request caching"
+  description = "Versioning object"
   type        = bool
   default     = false
 }
