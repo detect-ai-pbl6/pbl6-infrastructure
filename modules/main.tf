@@ -23,13 +23,22 @@ module "available-services" {
 }
 
 module "media_storage" {
-  source       = "./media-storage"
-  bucket_name  = var.bucket_name
-  region       = var.region
-  project_name = var.project_name
+  source               = "./storage"
+  bucket_name          = "media-bucket"
+  region               = var.region
+  project_name         = var.project_name
+  allowed_cors_origins = ["*"]
 }
 
-module "artifact_registry" {
+module "ai_model_storage" {
+  source       = "./storage"
+  bucket_name  = "ai-model-bucket"
+  region       = var.region
+  project_name = var.project_name
+  versioning   = true
+}
+
+module "backend_server_image_registry" {
   source  = "GoogleCloudPlatform/artifact-registry/google"
   version = "~> 0.3"
 
@@ -39,24 +48,35 @@ module "artifact_registry" {
   repository_id = "${var.project_name}-${terraform.workspace}-backend-image-registry"
 }
 
+module "ai_server_image_registry" {
+  source  = "GoogleCloudPlatform/artifact-registry/google"
+  version = "~> 0.3"
+
+  project_id    = var.project_id
+  location      = var.region
+  format        = "DOCKER"
+  repository_id = "${var.project_name}-${terraform.workspace}-ai-server-image-registry"
+}
+
 module "vpc" {
   source       = "./vpc"
-  bucket_name  = var.bucket_name
   region       = var.region
   project_name = var.project_name
   project_id   = var.project_id
 }
 
+# Allow IAP conenct to resource
 resource "google_compute_firewall" "allow_ssh" {
-  name    = "${var.project_name}-${terraform.workspace}-allow-ssh"
-  network = module.vpc.network_name
+  name        = "${var.project_name}-${terraform.workspace}-allow-ssh"
+  network     = module.vpc.network_name
+  project     = var.project_id
+  description = "Allows TCP connections from IAP to any instance on the network"
   allow {
     protocol = "tcp"
-    ports    = ["22"]
   }
 
+  priority      = 100
   source_ranges = ["35.235.240.0/20"]
-  target_tags   = ["allow-ssh"]
 }
 
 resource "google_compute_firewall" "allow_all_from_public_subnet_to_private_subnet" {
@@ -116,6 +136,30 @@ resource "google_compute_firewall" "allow_all_private_subnet_to_public_subnet" {
   }
 }
 
+
+### RABBITMQ ####
+
+module "rabbitmq_instance" {
+  source           = "./vm"
+  number_instances = 1
+  instance_name    = "${var.project_name}-${terraform.workspace}-rabbitmq"
+  is_spot          = true
+  zone             = var.zone
+  network          = module.vpc.network_name
+  sub_network      = module.vpc.private_subnet_name
+  tags             = ["allow-ssh", "private-subnet", "private-access", "public-access", "backend-service"]
+  region           = var.region
+  network_id       = module.vpc.network_id
+  project_id       = var.project_id
+  startup_script = templatefile("${path.module}/scripts/install_rabbitmq.sh.tpl", {
+    RABBITMQ_USERNAME = var.rabbitmq_username,
+    RABBITMQ_PASSWORD = var.rabbitmq_password,
+    RABBITMQ_VHOST    = var.rabbitmq_vhost
+  })
+
+  depends_on = [google_compute_route.private_to_nat]
+}
+
 ### NAT INSTANCE #####
 
 # resource "google_compute_firewall" "nat_firewall" {
@@ -153,36 +197,36 @@ resource "google_compute_firewall" "allow_all_private_subnet_to_public_subnet" {
 #   project_id       = var.project_id
 # }
 
-# resource "google_compute_address" "nat_instance" {
-#   name   = "nat-instance"
-#   region = var.region
-# }
+resource "google_compute_address" "nat_instance" {
+  name   = "nat-instance"
+  region = var.region
+}
 
-# module "nat_instance" {
-#   source         = "./nat-instance"
-#   network        = module.vpc.network_name
-#   subnet         = module.vpc.public_subnet_name
-#   project_name   = var.project_name
-#   address        = google_compute_address.nat_instance.address // Required
-#   zone           = var.zone                                    // Required
-#   disk_type      = "pd-standard"                               // Optional
-#   machine_type   = "e2-micro"                                  // Optional
-#   route_priority = 900                                         // Optional
-# }
+module "nat_instance" {
+  source         = "./nat-instance"
+  network        = module.vpc.network_name
+  subnet         = module.vpc.public_subnet_name
+  project_name   = var.project_name
+  address        = google_compute_address.nat_instance.address // Required
+  zone           = var.zone                                    // Required
+  disk_type      = "pd-standard"                               // Optional
+  machine_type   = "e2-micro"                                  // Optional
+  route_priority = 900                                         // Optional
+}
 
-# resource "google_compute_route" "private_to_nat" {
-#   name        = "${var.project_name}-${terraform.workspace}-private-to-nat"
-#   network     = module.vpc.network_name
-#   dest_range  = "0.0.0.0/0"
-#   priority    = 800
-#   tags        = ["private-subnet"]
-#   next_hop_ip = module.nat_instance.address
+resource "google_compute_route" "private_to_nat" {
+  name        = "${var.project_name}-${terraform.workspace}-private-to-nat"
+  network     = module.vpc.network_name
+  dest_range  = "0.0.0.0/0"
+  priority    = 800
+  tags        = ["private-subnet"]
+  next_hop_ip = module.nat_instance.address
 
-#   depends_on = [
-#     module.vpc.private_subnet_name,
-#     module.vpc.public_subnet_name
-#   ]
-# }
+  depends_on = [
+    module.vpc.private_subnet_name,
+    module.vpc.public_subnet_name
+  ]
+}
 
 resource "google_compute_global_address" "private_ip_address" {
   name          = "private-ip"
@@ -221,7 +265,7 @@ module "pg" {
   database_flags = [{ name = "autovacuum", value = "off" }]
 
   ip_configuration = {
-    ipv4_enabled    = true
+    ipv4_enabled    = false
     require_ssl     = true
     private_network = "projects/${var.project_id}/global/networks/${module.vpc.network_name}"
 
@@ -355,6 +399,16 @@ module "secrets" {
   gcp_client_id = var.gcp_client_id
   gcp_secret    = var.gcp_secret
 
-  bucket_name = module.media_storage.bucket_name
-  depends_on  = [module.pg]
+  superuser_email    = var.superuser_email
+  superuser_password = var.superuser_password
+
+  admin_origin = var.admin_origin
+  bucket_name  = module.media_storage.bucket_name
+
+  rabbitmq_host     = module.rabbitmq_instance.instance_ip
+  rabbitmq_username = var.rabbitmq_username
+  rabbitmq_password = var.rabbitmq_password
+  rabbitmq_vhost    = var.rabbitmq_vhost
+
+  depends_on = [module.pg]
 }

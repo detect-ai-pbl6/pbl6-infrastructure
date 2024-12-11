@@ -27,3 +27,7 @@ output "self_link" {
 output "network_name" {
   value = google_compute_network.vpc_network.name
 }
+
+output "private_network_self_link" {
+  value = google_compute_subnetwork.private_subnet.self_link
+}

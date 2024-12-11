@@ -1,19 +1,26 @@
 locals {
   secret_name_prefix = "${var.project_name}-${terraform.workspace}-secrets"
   secrets = {
-    "db-host"              = var.database_host
-    "db-username"          = var.database_user
-    "db-password"          = var.database_password
-    "db-name"              = var.database_name
-    "gcp-bucket-name"      = var.bucket_name
-    "host"                 = var.host
-    "secret-key"           = var.secret_key
-    "cors-allowed-origins" = var.cors_allowed_origins
-    "csrf-trusted-origins" = var.csrf_trusted_origins
-    "private-key"          = var.private_key
-    "public-key"           = var.public_key
-    "google-client-id"     = var.gcp_client_id
-    "google-secret"        = var.gcp_secret
+    "db-host"                 = var.database_host
+    "db-username"             = var.database_user
+    "db-password"             = var.database_password
+    "db-name"                 = var.database_name
+    "gcp-bucket-name"         = var.bucket_name
+    "host"                    = var.host
+    "secret-key"              = var.secret_key
+    "cors-allowed-origins"    = var.cors_allowed_origins
+    "csrf-trusted-origins"    = var.csrf_trusted_origins
+    "private-key"             = var.private_key
+    "public-key"              = var.public_key
+    "google-client-id"        = var.gcp_client_id
+    "google-secret"           = var.gcp_secret
+    "superuser-email"         = var.superuser_email
+    "superuser_password"      = var.superuser_password
+    "admin_origin"            = var.admin_origin
+    "message_broker_username" = var.rabbitmq_username
+    "message_broker_password" = var.rabbitmq_password
+    "message_broker_host"     = var.rabbitmq_host
+    "message_broker_vhost"    = var.rabbitmq_vhost
   }
 }
 
