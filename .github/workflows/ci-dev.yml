@@ -1,76 +1,77 @@
-name: 'CI-dev'
+---
+name: CI-dev
 
 on:
-  pull_request:
-    branches: [ "dev" ]
+    pull_request:
+        branches: [dev]
 
 permissions:
-  contents: read
-  pull-requests: write
-  
+    contents: read
+    pull-requests: write
+
 jobs:
-  terraform:
-    name: 'Terraform CI'
-    runs-on: ubuntu-latest
-    env:
-      TF_WORKSPACE: dev
-      TF_VAR_project_id: ${{ vars.DEV_PROJECT_ID }}
-      TF_VAR_region: ${{ vars.DEV_REGION }}
-      TF_VAR_zone: ${{ VARS.DEV_ZONE }}
+    terraform:
+        name: Terraform CI
+        runs-on: ubuntu-latest
+        env:
+            TF_WORKSPACE: dev
+            TF_VAR_project_id: ${{ vars.DEV_PROJECT_ID }}
+            TF_VAR_region: ${{ vars.DEV_REGION }}
+            TF_VAR_zone: ${{ VARS.DEV_ZONE }}
       # TF_VAR_bucket_name: ${{ vars.DEV_BUCKET_NAME }}
-      TF_VAR_project_name: ${{ vars.DEV_project_name }}
-      TF_VAR_db_tier: ${{ vars.DEV_DB_TIER }}
-      TF_VAR_db_name: ${{ vars.DEV_DB_NAME }}
-      TF_VAR_db_user: ${{ vars.DEV_DB_USER }}
-      TF_VAR_db_password: ${{ secrets.DEV_DB_PASSWORD }}
-      TF_VAR_secret_key: ${{ secrets.DEV_SECRET_KEY }}
-      TF_VAR_cors_allowed_origins: ${{ vars.DEV_CORS_ALLOWED_ORIGINS }}
-      TF_VAR_domain_name: ${{ vars.DEV_DOMAIN_NAME }}
-      TF_VAR_private_key: ${{ secrets.DEV_PRIVATE_KEY }}
-      TF_VAR_public_key: ${{ secrets.DEV_PUBLIC_KEY }}
-      TF_VAR_csrf_trusted_origins: ${{ vars.DEV_CSRF_TRUSTED_ORIGINS }}
-      TF_VAR_gcp_client_id: ${{ secrets.DEV_GCP_CLIENT_ID }}
-      TF_VAR_gcp_secret: ${{ secrets.DEV_GCP_SECRET }}
-      TF_VAR_superuser_email: ${{ vars.DEV_SUPERUSER_EMAIL }}
-      TF_VAR_superuser_password: ${{ secrets.DEV_SUPERUSER_PASSWORD }}
-      TF_VAR_admin_origin: ${{ vars.DEV_ADMIN_ORIGIN }}
-      TF_VAR_rabbitmq_password: ${{ secrets.DEV_RABBITMQ_PASSWORD }}
-      TF_VAR_rabbitmq_username: ${{ vars.DEV_RABBITMQ_USERNAME }}
-      TF_VAR_rabbitmq_vhost: ${{ vars.DEV_RABBITMQ_VHOST }}
-      GOOGLE_CREDENTIALS: ${{ secrets.DEV_GOOGLE_CREDENTIALS }} 
+            TF_VAR_project_name: ${{ vars.DEV_project_name }}
+            TF_VAR_db_tier: ${{ vars.DEV_DB_TIER }}
+            TF_VAR_db_name: ${{ vars.DEV_DB_NAME }}
+            TF_VAR_db_user: ${{ vars.DEV_DB_USER }}
+            TF_VAR_db_password: ${{ secrets.DEV_DB_PASSWORD }}
+            TF_VAR_secret_key: ${{ secrets.DEV_SECRET_KEY }}
+            TF_VAR_cors_allowed_origins: ${{ vars.DEV_CORS_ALLOWED_ORIGINS }}
+            TF_VAR_domain_name: ${{ vars.DEV_DOMAIN_NAME }}
+            TF_VAR_private_key: ${{ secrets.DEV_PRIVATE_KEY }}
+            TF_VAR_public_key: ${{ secrets.DEV_PUBLIC_KEY }}
+            TF_VAR_csrf_trusted_origins: ${{ vars.DEV_CSRF_TRUSTED_ORIGINS }}
+            TF_VAR_gcp_client_id: ${{ secrets.DEV_GCP_CLIENT_ID }}
+            TF_VAR_gcp_secret: ${{ secrets.DEV_GCP_SECRET }}
+            TF_VAR_superuser_email: ${{ vars.DEV_SUPERUSER_EMAIL }}
+            TF_VAR_superuser_password: ${{ secrets.DEV_SUPERUSER_PASSWORD }}
+            TF_VAR_admin_origin: ${{ vars.DEV_ADMIN_ORIGIN }}
+            TF_VAR_rabbitmq_password: ${{ secrets.DEV_RABBITMQ_PASSWORD }}
+            TF_VAR_rabbitmq_username: ${{ vars.DEV_RABBITMQ_USERNAME }}
+            TF_VAR_rabbitmq_vhost: ${{ vars.DEV_RABBITMQ_VHOST }}
+            GOOGLE_CREDENTIALS: ${{ secrets.DEV_GOOGLE_CREDENTIALS }}
 
 
-    steps:
+        steps:
     # Checkout the repository to the GitHub Actions runner
-    - name: Checkout
-      uses: actions/checkout@v3
+            - name: Checkout
+              uses: actions/checkout@v3
 
     # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: "1.9.8"
+            - name: Setup Terraform
+              uses: hashicorp/setup-terraform@v3
+              with:
+                  terraform_version: 1.9.8
 
-    - name: Terraform Format
-      id: fmt
-      run: terraform fmt -check -recursive
-      continue-on-error: true
+            - name: Terraform Format
+              id: fmt
+              run: terraform fmt -check -recursive
+              continue-on-error: true
 
-    - name: Terraform Init
-      id: init
-      run: terraform init
-      env:
-        GOOGLE_CREDENTIALS: ${{ env.GOOGLE_CREDENTIALS }} 
+            - name: Terraform Init
+              id: init
+              run: terraform init
+              env:
+                  GOOGLE_CREDENTIALS: ${{ env.GOOGLE_CREDENTIALS }}
 
     # Generates an execution plan for Terraform
-    - name: Terraform Plan
-      id: plan
-      run: terraform plan -input=false -out .planfile         
-      env:
-        GOOGLE_CREDENTIALS: ${{ env.GOOGLE_CREDENTIALS }}
-        
-    - name: Post PR comment
-      uses: borchero/terraform-plan-comment@v2
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        planfile: .planfile
+            - name: Terraform Plan
+              id: plan
+              run: terraform plan -input=false -out .planfile
+              env:
+                  GOOGLE_CREDENTIALS: ${{ env.GOOGLE_CREDENTIALS }}
+
+            - name: Post PR comment
+              uses: borchero/terraform-plan-comment@v2
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+                  planfile: .planfile

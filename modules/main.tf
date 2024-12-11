@@ -160,6 +160,34 @@ module "rabbitmq_instance" {
   depends_on = [google_compute_route.private_to_nat]
 }
 
+### AI SERVER INSTANCE ###
+module "ai_server_instance" {
+  source           = "./vm"
+  number_instances = 1
+  instance_name    = "${var.project_name}-${terraform.workspace}-ai-server"
+  is_spot          = true
+  zone             = var.zone
+  network          = module.vpc.network_name
+  sub_network      = module.vpc.private_subnet_name
+  tags             = ["allow-ssh", "private-subnet", "private-access", "public-access", "backend-service"]
+  region           = var.region
+  network_id       = module.vpc.network_id
+  project_id       = var.project_id
+  startup_script = templatefile("${path.module}/scripts/install_ai_server.sh.tpl", {
+    REGION              = var.region
+    PROJECT_ID          = var.project_id
+    ARTIFACT_REPOSITORY = module.ai_server_image_registry.artifact_name
+    IMAGE_NAME          = "dev-ai-server"
+    RABBITMQ_HOST       = module.rabbitmq_instance.instance_ip
+    RABBITMQ_PASSWORD   = var.rabbitmq_password
+    RABBITMQ_USERNAME   = var.rabbitmq_username
+    RABBITMQ_VHOST      = var.rabbitmq_vhost
+  })
+
+  depends_on = [google_compute_route.private_to_nat]
+}
+
+
 ### NAT INSTANCE #####
 
 # resource "google_compute_firewall" "nat_firewall" {
