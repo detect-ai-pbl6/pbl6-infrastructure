@@ -14,7 +14,7 @@ resource "google_compute_managed_ssl_certificate" "default" {
 }
 
 module "gce-lb-http" {
-  source         = "GoogleCloudPlatform/lb-http/google//modules/serverless_negs"
+  source         = "GoogleCloudPlatform/lb-http/google"
   version        = "~> 12.0"
   name           = "${local.lb_name_prefix}-lb"
   project        = var.project_id
@@ -27,18 +27,42 @@ module "gce-lb-http" {
 
   backends = {
     default = {
-      description = null
-      groups = [
-        {
-          group = var.neg_id
-        }
-      ]
-      enable_cdn = false
-
-      iap_config = {
-        enable = false
+      description                     = "Default backend group"
+      protocol                        = "HTTP"
+      port                            = 80
+      port_name                       = "http"
+      timeout_sec                     = 10
+      enable_cdn                      = false
+      custom_request_headers          = []
+      custom_response_headers         = []
+      security_policy                 = null
+      connection_draining_timeout_sec = 300
+      session_affinity                = "NONE"
+      affinity_cookie_ttl_sec         = 0
+      health_check = {
+        check_interval_sec  = 30
+        timeout_sec         = 10
+        healthy_threshold   = 2
+        unhealthy_threshold = 8
+        request_path        = "/api/health"
+        port                = 80
+        logging             = true
       }
       log_config = {
+        enable      = true
+        sample_rate = 1.0
+      }
+      groups = [
+        {
+          group           = var.instance_group
+          balancing_mode  = "UTILIZATION"
+          capacity_scaler = 1.0
+          description     = "Instance group for backend"
+          max_utilization = 0.8
+        },
+      ]
+
+      iap_config = {
         enable = false
       }
     }

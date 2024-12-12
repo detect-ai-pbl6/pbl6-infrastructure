@@ -107,3 +107,14 @@ variable "rabbitmq_vhost" {
   type        = string
   description = "The RabbitMQ virtual host to be used for organizing queues and exchanges."
 }
+
+variable "github_client_id" {
+  type        = string
+  description = "Client ID for Github OAuth authentication"
+}
+
+variable "github_secret" {
+  type        = string
+  description = "Client secret for Github OAuth authentication"
+  sensitive   = true
+}

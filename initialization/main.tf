@@ -71,7 +71,7 @@ resource "google_storage_bucket" "default" {
 
 resource "local_file" "default" {
   file_permission = "0644"
-  filename        = "${path.module}/../backend.tf"
+  filename        = "${path.module}/../version.tf"
 
   # You can store the template in a file and use the templatefile function for
   # more modularity, if you prefer, instead of storing the template inline as
@@ -80,7 +80,48 @@ resource "local_file" "default" {
   terraform {
     backend "gcs" {
       bucket = "${google_storage_bucket.default.name}"
+      prefix = "tstatic.tfstate.d"
     }
+    required_providers {
+      google = {
+        source  = "hashicorp/google"
+        version = ">= 6.0, < 7"
+      }
+      google-beta = {
+        source  = "hashicorp/google-beta"
+        version = ">= 6.0, < 7"
+      }
+    }
+  }
+  EOT
+}
+
+resource "local_file" "variables_file" {
+  file_permission = "0644"
+  filename        = "${path.module}/../variables.tf"
+
+  # You can store the template in a file and use the templatefile function for
+  # more modularity, if you prefer, instead of storing the template inline as
+  # we do here.
+  content = <<-EOT
+  variable "project_name" {
+    type        = string
+    description = "The name of the Google Cloud Platform (GCP) project"
+  }
+
+  variable "project_id" {
+    type        = string
+    description = "The unique identifier for the GCP project"
+  }
+
+  variable "region" {
+    type        = string
+    description = "The GCP region where resources will be deployed (e.g., us-central1, europe-west1)"
+  }
+
+  variable "zone" {
+    type        = string
+    description = "The specific zone within the selected region for resource placement"
   }
   EOT
 }
