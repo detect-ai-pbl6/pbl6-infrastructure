@@ -60,3 +60,9 @@ variable "project_id" {
   type        = string
   description = "project id"
 }
+
+variable "force_recreate" {
+  type        = bool
+  description = "should re-create-instance"
+  default     = false
+}

@@ -36,7 +36,8 @@ resource "google_project_iam_member" "cloudrun_roles" {
     "roles/storage.admin",
     "roles/artifactregistry.reader",
     "roles/artifactregistry.writer",
-    "roles/secretmanager.secretAccessor"
+    "roles/secretmanager.secretAccessor",
+    "roles/iam.serviceAccountTokenCreator"
   ])
 
   project = var.project_id
@@ -51,15 +52,16 @@ resource "google_cloud_run_v2_service" "service" {
   location             = var.region
   default_uri_disabled = true
   template {
+
     containers {
-      image = "asia-southeast1-docker.pkg.dev/pbl6-439109/pbl6-dev-backend-image-registry/dev-backend-image@sha256:80fc169bfac91fbd14333ba3f214c91c0ffb66fafa5486205270a9edc19a7ebc"
+      image = "asia-southeast1-docker.pkg.dev/pbl6-439109/pbl6-dev-backend-image-registry/dev-backend-image:latest"
       ports {
         container_port = 80
       }
       dynamic "env" {
         for_each = var.envs_data
         content {
-          name = upper(replace(env.key, "-", "_")) # Convert database-host to DATABASE_HOST
+          name = upper(replace(env.key, "-", "_"))
           value_source {
             secret_key_ref {
               secret  = env.value.secret_id
@@ -83,6 +85,7 @@ resource "google_cloud_run_v2_service" "service" {
   }
   ingress      = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
   launch_stage = "BETA"
+
 }
 
 

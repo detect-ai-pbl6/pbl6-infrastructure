@@ -22,3 +22,8 @@ variable "envs_data" {
   type        = any
   description = "enviroments pass to container "
 }
+
+variable "cloud_sql_connection_name" {
+  type        = string
+  description = "cloud sql instance name"
+}

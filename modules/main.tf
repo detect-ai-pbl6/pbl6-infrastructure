@@ -17,15 +17,28 @@ resource "google_project_iam_member" "storage_roles" {
   member  = "serviceAccount:${google_service_account.storage_account.email}"
 }
 
-
-module "media_storage" {
-  source       = "./media-storage"
-  bucket_name  = var.bucket_name
-  region       = var.region
-  project_name = var.project_name
+module "available-services" {
+  source     = "./available-services"
+  project_id = var.project_id
 }
 
-module "artifact_registry" {
+module "media_storage" {
+  source               = "./storage"
+  bucket_name          = "media-bucket"
+  region               = var.region
+  project_name         = var.project_name
+  allowed_cors_origins = ["*"]
+}
+
+module "ai_model_storage" {
+  source       = "./storage"
+  bucket_name  = "ai-model-bucket"
+  region       = var.region
+  project_name = var.project_name
+  versioning   = true
+}
+
+module "backend_server_image_registry" {
   source  = "GoogleCloudPlatform/artifact-registry/google"
   version = "~> 0.3"
 
@@ -35,24 +48,35 @@ module "artifact_registry" {
   repository_id = "${var.project_name}-${terraform.workspace}-backend-image-registry"
 }
 
+module "ai_server_image_registry" {
+  source  = "GoogleCloudPlatform/artifact-registry/google"
+  version = "~> 0.3"
+
+  project_id    = var.project_id
+  location      = var.region
+  format        = "DOCKER"
+  repository_id = "${var.project_name}-${terraform.workspace}-ai-server-image-registry"
+}
+
 module "vpc" {
   source       = "./vpc"
-  bucket_name  = var.bucket_name
   region       = var.region
   project_name = var.project_name
   project_id   = var.project_id
 }
 
+# Allow IAP conenct to resource
 resource "google_compute_firewall" "allow_ssh" {
-  name    = "${var.project_name}-${terraform.workspace}-allow-ssh"
-  network = module.vpc.network_name
+  name        = "${var.project_name}-${terraform.workspace}-allow-ssh"
+  network     = module.vpc.network_name
+  project     = var.project_id
+  description = "Allows TCP connections from IAP to any instance on the network"
   allow {
     protocol = "tcp"
-    ports    = ["22"]
   }
 
+  priority      = 100
   source_ranges = ["35.235.240.0/20"]
-  target_tags   = ["allow-ssh"]
 }
 
 resource "google_compute_firewall" "allow_all_from_public_subnet_to_private_subnet" {
@@ -112,6 +136,58 @@ resource "google_compute_firewall" "allow_all_private_subnet_to_public_subnet" {
   }
 }
 
+
+### RABBITMQ ####
+
+module "rabbitmq_instance" {
+  source           = "./vm"
+  number_instances = 1
+  instance_name    = "${var.project_name}-${terraform.workspace}-rabbitmq"
+  is_spot          = true
+  zone             = var.zone
+  network          = module.vpc.network_name
+  sub_network      = module.vpc.private_subnet_name
+  tags             = ["allow-ssh", "private-subnet", "private-access", "public-access", "backend-service"]
+  region           = var.region
+  network_id       = module.vpc.network_id
+  project_id       = var.project_id
+  startup_script = templatefile("${path.module}/scripts/install_rabbitmq.sh.tpl", {
+    RABBITMQ_USERNAME = var.rabbitmq_username,
+    RABBITMQ_PASSWORD = var.rabbitmq_password,
+    RABBITMQ_VHOST    = var.rabbitmq_vhost
+  })
+
+  depends_on = [google_compute_route.private_to_nat]
+}
+
+### AI SERVER INSTANCE ###
+module "ai_server_instance" {
+  source           = "./vm"
+  number_instances = 1
+  instance_name    = "${var.project_name}-${terraform.workspace}-ai-server"
+  is_spot          = true
+  zone             = var.zone
+  network          = module.vpc.network_name
+  sub_network      = module.vpc.private_subnet_name
+  tags             = ["allow-ssh", "private-subnet", "private-access", "public-access", "backend-service"]
+  region           = var.region
+  network_id       = module.vpc.network_id
+  project_id       = var.project_id
+  startup_script = templatefile("${path.module}/scripts/install_ai_server.sh.tpl", {
+    REGION              = var.region
+    PROJECT_ID          = var.project_id
+    ARTIFACT_REPOSITORY = module.ai_server_image_registry.artifact_name
+    IMAGE_NAME          = "dev-ai-server"
+    RABBITMQ_HOST       = module.rabbitmq_instance.instance_ip
+    RABBITMQ_PASSWORD   = var.rabbitmq_password
+    RABBITMQ_USERNAME   = var.rabbitmq_username
+    RABBITMQ_VHOST      = var.rabbitmq_vhost
+  })
+
+  depends_on = [google_compute_route.private_to_nat]
+}
+
+
 ### NAT INSTANCE #####
 
 # resource "google_compute_firewall" "nat_firewall" {
@@ -149,36 +225,36 @@ resource "google_compute_firewall" "allow_all_private_subnet_to_public_subnet" {
 #   project_id       = var.project_id
 # }
 
-# resource "google_compute_address" "nat_instance" {
-#   name   = "nat-instance"
-#   region = var.region
-# }
+resource "google_compute_address" "nat_instance" {
+  name   = "nat-instance"
+  region = var.region
+}
 
-# module "nat_instance" {
-#   source         = "./nat-instance"
-#   network        = module.vpc.network_name
-#   subnet         = module.vpc.public_subnet_name
-#   project_name   = var.project_name
-#   address        = google_compute_address.nat_instance.address // Required
-#   zone           = var.zone                                    // Required
-#   disk_type      = "pd-standard"                               // Optional
-#   machine_type   = "e2-micro"                                  // Optional
-#   route_priority = 900                                         // Optional
-# }
+module "nat_instance" {
+  source         = "./nat-instance"
+  network        = module.vpc.network_name
+  subnet         = module.vpc.public_subnet_name
+  project_name   = var.project_name
+  address        = google_compute_address.nat_instance.address // Required
+  zone           = var.zone                                    // Required
+  disk_type      = "pd-standard"                               // Optional
+  machine_type   = "e2-micro"                                  // Optional
+  route_priority = 900                                         // Optional
+}
 
-# resource "google_compute_route" "private_to_nat" {
-#   name        = "${var.project_name}-${terraform.workspace}-private-to-nat"
-#   network     = module.vpc.network_name
-#   dest_range  = "0.0.0.0/0"
-#   priority    = 800
-#   tags        = ["private-subnet"]
-#   next_hop_ip = module.nat_instance.address
+resource "google_compute_route" "private_to_nat" {
+  name        = "${var.project_name}-${terraform.workspace}-private-to-nat"
+  network     = module.vpc.network_name
+  dest_range  = "0.0.0.0/0"
+  priority    = 800
+  tags        = ["private-subnet"]
+  next_hop_ip = module.nat_instance.address
 
-#   depends_on = [
-#     module.vpc.private_subnet_name,
-#     module.vpc.public_subnet_name
-#   ]
-# }
+  depends_on = [
+    module.vpc.private_subnet_name,
+    module.vpc.public_subnet_name
+  ]
+}
 
 resource "google_compute_global_address" "private_ip_address" {
   name          = "private-ip"
@@ -217,7 +293,7 @@ module "pg" {
   database_flags = [{ name = "autovacuum", value = "off" }]
 
   ip_configuration = {
-    ipv4_enabled    = true
+    ipv4_enabled    = false
     require_ssl     = true
     private_network = "projects/${var.project_id}/global/networks/${module.vpc.network_name}"
 
@@ -245,6 +321,93 @@ module "pg" {
 
 }
 
+
+
+
+module "cloudrun_backend" {
+  source                    = "./cloudrun"
+  envs_data                 = module.secrets.secrets_data
+  project_id                = var.project_id
+  project_name              = var.project_name
+  network_id                = module.vpc.network_id
+  region                    = var.region
+  cloud_sql_connection_name = module.pg.instance_connection_name
+
+  depends_on = [module.secrets, module.pg]
+}
+
+module "load_balance" {
+  source       = "./load-balance"
+  project_id   = var.project_id
+  project_name = var.project_name
+  neg_id       = module.cloudrun_backend.neg_id
+  domain_name  = var.domain_name
+  depends_on   = [module.cloudrun_backend]
+}
+
+# resource "google_pubsub_topic" "billing_report_topic" {
+#   name = "daily-billing-report"
+# }
+
+
+# resource "google_storage_bucket" "function_bucket" {
+#   name     = "${var.project_id}-functions"
+#   location = "US"
+# }
+
+# resource "google_cloudfunctions_function" "billing_report_function" {
+#   name        = "daily-billing-report-function"
+#   description = "Sends daily billing reports"
+#   runtime     = "python310" # Adjust based on your code
+
+#   available_memory_mb   = 128
+#   source_archive_bucket = google_storage_bucket.function_bucket.name
+#   source_archive_object = google_storage_bucket_object.function_code.name
+#   entry_point           = "send_daily_billing_report"
+
+#   event_trigger {
+#     event_type = "google.pubsub.topic.publish"
+#     resource   = google_pubsub_topic.billing_report_topic.id
+#   }
+
+#   environment_variables = {
+#     PROJECT_ID = var.project_id
+#   }
+# }
+
+# resource "google_storage_bucket_object" "function_code" {
+#   name   = "function-source.zip"
+#   bucket = google_storage_bucket.function_bucket.name
+#   source = "path/to/function-source.zip" # Path to your function code
+# }
+
+module "dns_public_zone" {
+  source  = "terraform-google-modules/cloud-dns/google"
+  version = "~> 5.0"
+
+  project_id = var.project_id
+  type       = "public"
+  name       = "${var.project_name}-${terraform.workspace}-public-dns-zone"
+  domain     = "${var.domain_name}."
+
+  enable_logging = true
+
+  recordsets = [
+    {
+      name    = ""
+      type    = "A"
+      ttl     = 300
+      records = [module.load_balance.external_ip]
+    },
+    {
+      name    = "www"
+      type    = "CNAME"
+      ttl     = 300
+      records = ["www.${var.domain_name}."]
+    },
+  ]
+}
+
 module "secrets" {
   source       = "./secret"
   project_name = var.project_name
@@ -254,27 +417,26 @@ module "secrets" {
   database_name     = var.db_name
   database_password = var.db_password
 
-  bucket_name = module.media_storage.bucket_name
-  depends_on  = [module.pg]
-}
+  secret_key           = var.secret_key
+  cors_allowed_origins = var.cors_allowed_origins
+  csrf_trusted_origins = var.csrf_trusted_origins
+  host                 = "https://${var.domain_name}/"
+  private_key          = var.private_key
+  public_key           = var.public_key
 
+  gcp_client_id = var.gcp_client_id
+  gcp_secret    = var.gcp_secret
 
+  superuser_email    = var.superuser_email
+  superuser_password = var.superuser_password
 
-module "cloudrun_backend" {
-  source       = "./cloudrun"
-  envs_data    = module.secrets.secrets_data
-  project_id   = var.project_id
-  project_name = var.project_name
-  network_id   = module.vpc.network_id
-  region       = var.region
+  admin_origin = var.admin_origin
+  bucket_name  = module.media_storage.bucket_name
 
-  depends_on = [module.secrets]
-}
+  rabbitmq_host     = module.rabbitmq_instance.instance_ip
+  rabbitmq_username = var.rabbitmq_username
+  rabbitmq_password = var.rabbitmq_password
+  rabbitmq_vhost    = var.rabbitmq_vhost
 
-module "load_balance" {
-  source       = "./load-balance"
-  project_id   = var.project_id
-  project_name = var.project_name
-  neg_id       = module.cloudrun_backend.neg_id
-  depends_on   = [module.cloudrun_backend]
+  depends_on = [module.pg]
 }
