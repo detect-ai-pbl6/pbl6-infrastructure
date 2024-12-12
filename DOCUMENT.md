@@ -8,6 +8,7 @@ No requirements.
 | Name | Version |
 |------|---------|
 | <a name="provider_google"></a> [google](#provider\_google) | n/a |
+| <a name="provider_random"></a> [random](#provider\_random) | n/a |
 
 ## Modules
 
@@ -17,8 +18,8 @@ No requirements.
 | <a name="module_ai_server_image_registry"></a> [ai\_server\_image\_registry](#module\_ai\_server\_image\_registry) | GoogleCloudPlatform/artifact-registry/google | ~> 0.3 |
 | <a name="module_ai_server_instance"></a> [ai\_server\_instance](#module\_ai\_server\_instance) | ./vm | n/a |
 | <a name="module_available-services"></a> [available-services](#module\_available-services) | ./available-services | n/a |
+| <a name="module_backend_instances"></a> [backend\_instances](#module\_backend\_instances) | ./vm | n/a |
 | <a name="module_backend_server_image_registry"></a> [backend\_server\_image\_registry](#module\_backend\_server\_image\_registry) | GoogleCloudPlatform/artifact-registry/google | ~> 0.3 |
-| <a name="module_cloudrun_backend"></a> [cloudrun\_backend](#module\_cloudrun\_backend) | ./cloudrun | n/a |
 | <a name="module_dns_public_zone"></a> [dns\_public\_zone](#module\_dns\_public\_zone) | terraform-google-modules/cloud-dns/google | ~> 5.0 |
 | <a name="module_load_balance"></a> [load\_balance](#module\_load\_balance) | ./load-balance | n/a |
 | <a name="module_media_storage"></a> [media\_storage](#module\_media\_storage) | ./storage | n/a |
@@ -35,12 +36,14 @@ No requirements.
 | [google_compute_address.nat_instance](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_address) | resource |
 | [google_compute_firewall.allow_all_from_public_subnet_to_private_subnet](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_firewall) | resource |
 | [google_compute_firewall.allow_all_private_subnet_to_public_subnet](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_firewall) | resource |
+| [google_compute_firewall.allow_health_check](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_firewall) | resource |
 | [google_compute_firewall.allow_ssh](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_firewall) | resource |
 | [google_compute_global_address.private_ip_address](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_global_address) | resource |
 | [google_compute_route.private_to_nat](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_route) | resource |
 | [google_project_iam_member.storage_roles](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/project_iam_member) | resource |
 | [google_service_account.storage_account](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/service_account) | resource |
 | [google_service_networking_connection.private_vpc_connection](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/service_networking_connection) | resource |
+| [random_string.random](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/string) | resource |
 
 ## Inputs
 
@@ -56,6 +59,8 @@ No requirements.
 | <a name="input_domain_name"></a> [domain\_name](#input\_domain\_name) | The domain name where the application will be hosted. | `string` | n/a | yes |
 | <a name="input_gcp_client_id"></a> [gcp\_client\_id](#input\_gcp\_client\_id) | The client ID of the GCP OAuth application. | `string` | n/a | yes |
 | <a name="input_gcp_secret"></a> [gcp\_secret](#input\_gcp\_secret) | The secret key of the GCP OAuth application. | `string` | n/a | yes |
+| <a name="input_github_client_id"></a> [github\_client\_id](#input\_github\_client\_id) | Client ID for Github OAuth authentication | `string` | n/a | yes |
+| <a name="input_github_secret"></a> [github\_secret](#input\_github\_secret) | Client secret for Github OAuth authentication | `string` | n/a | yes |
 | <a name="input_private_key"></a> [private\_key](#input\_private\_key) | The private key used for secure communication or encryption. | `string` | n/a | yes |
 | <a name="input_project_id"></a> [project\_id](#input\_project\_id) | The ID of the GCP project where the resources will be created. | `string` | n/a | yes |
 | <a name="input_project_name"></a> [project\_name](#input\_project\_name) | The name of the project. Used for identification purposes in resources and configurations. | `string` | n/a | yes |

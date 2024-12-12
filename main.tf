@@ -23,4 +23,7 @@ module "services" {
   rabbitmq_password = var.rabbitmq_password
   rabbitmq_username = var.rabbitmq_username
   rabbitmq_vhost    = var.rabbitmq_vhost
+
+  github_client_id = var.github_client_id
+  github_secret    = var.github_secret
 }
