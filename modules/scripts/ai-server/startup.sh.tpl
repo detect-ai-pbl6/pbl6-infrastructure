@@ -9,6 +9,7 @@ sudo apt-get install -y \
   ca-certificates \
   curl \
   gnupg \
+  yq \
   lsb-release
 
 # Add Docker's official GPG key
@@ -27,9 +28,16 @@ sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 
 gcloud auth configure-docker --quiet
 gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
-docker pull ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}/${IMAGE_NAME}:latest
-docker run --rm -d -p 8080:80 -e MESSAGE_BROKER_HOST=${RABBITMQ_HOST} \
-  -e MESSAGE_BROKER_PASSWORD=${RABBITMQ_PASSWORD} \
-  -e MESSAGE_BROKER_USERNAME=${RABBITMQ_USERNAME} \
-  -e MESSAGE_BROKER_VHOST=${RABBITMQ_VHOST} \
-  ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}/${IMAGE_NAME}:latest
+
+gcloud storage cp gs://${BUCKET_NAME}/model.pth /etc/docker/
+mkdir -p /etc/nginx
+cat <<EOT >/etc/nginx/nginx.conf
+${NGINX_CONTENT}
+EOT
+
+mkdir -p /etc/docker
+cat <<EOT >/etc/docker/docker-compose.yml
+${DOCKER_COMPOSE_CONTENT}
+EOT
+
+docker compose -f /etc/docker/docker-compose.yml up -d
