@@ -29,6 +29,7 @@ sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 gcloud auth configure-docker --quiet
 gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
 
+gcloud storage cp gs://${BUCKET_NAME}/model.pth /etc/docker/
 mkdir -p /etc/nginx
 cat <<EOT >/etc/nginx/nginx.conf
 ${NGINX_CONTENT}

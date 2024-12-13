@@ -9,7 +9,6 @@ sudo apt-get install -y \
   ca-certificates \
   curl \
   gnupg \
-  yq \
   lsb-release
 
 # Add Docker's official GPG key
@@ -25,6 +24,17 @@ sudo apt-get update
 
 # Install Docker Engine
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+
+sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && sudo chmod +x /usr/bin/yq
+# Install Docker Rollout
+# Create directory for Docker cli plugins
+sudo mkdir -p /usr/local/lib/docker/cli-plugins
+
+# Download docker-rollout script to system-wide Docker cli plugins directory
+sudo curl https://raw.githubusercontent.com/wowu/docker-rollout/master/docker-rollout -o /usr/local/lib/docker/cli-plugins/docker-rollout
+
+# Make the script executable for all users
+sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-rollout
 
 gcloud auth configure-docker --quiet
 gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
@@ -80,6 +90,6 @@ for SECRET_NAME in $SECRET_NAMES; do
   echo "$${SANITIZED_KEY}=\"$${LATEST_SECRET_VALUE}\"" >>"$OUTPUT_FILE"
 done
 
-echo ".env file created successfully: $OUTPUT_FILE"
+echo ".env file created successfully at: $OUTPUT_FILE"
 
 docker compose -f /etc/docker/docker-compose.yml up -d
