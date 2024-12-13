@@ -159,5 +159,5 @@ variable "min_instances" {
 variable "replace_trigger_by" {
   description = "Set of references to any other resources which when changed cause this resource to be proposed for replacement"
   type        = any
-  default     = null
+  default     = ""
 }

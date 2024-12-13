@@ -21,8 +21,8 @@ locals {
     "message_broker_password" = var.rabbitmq_password
     "message_broker_host"     = var.rabbitmq_host
     "message_broker_vhost"    = var.rabbitmq_vhost
-    "github_client_id"        = var.github_client_id
-    "github_secret"           = var.github_secret
+    "github-client-id"        = var.github_client_id
+    "github-secret"           = var.github_secret
   }
 }
 

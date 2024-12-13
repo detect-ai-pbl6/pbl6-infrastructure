@@ -10,7 +10,7 @@ locals {
       RABBITMQ_USERNAME   = var.rabbitmq_username
       RABBITMQ_VHOST      = var.rabbitmq_vhost
     })
-    nginx_conf_content = file("${path.module}/scripts/ai-server/nginx.conf.tpl")
+    nginx_conf_content = filebase64("${path.module}/scripts/ai-server/nginx.conf.tpl")
   }
   api_server = {
     docker_compose_conf_content = templatefile("${path.module}/scripts/api-server/docker-compose.yml.tpl", {
@@ -19,7 +19,7 @@ locals {
       ARTIFACT_REPOSITORY = module.backend_server_image_registry.artifact_name
       IMAGE_NAME          = "dev-backend-image"
     })
-    nginx_conf_content = file("${path.module}/scripts/api-server/nginx.conf.tpl")
+    nginx_conf_content = filebase64("${path.module}/scripts/api-server/nginx.conf.tpl")
   }
 }
 
@@ -183,7 +183,7 @@ resource "google_compute_firewall" "allow_all_private_subnet_to_public_subnet" {
 module "rabbitmq_instance" {
   source        = "./vm"
   instance_name = "${var.project_name}-${terraform.workspace}-rabbitmq"
-  is_spot       = true
+  is_spot       = false
   zone          = var.zone
   network       = module.vpc.network_name
   sub_network   = module.vpc.private_subnet_name
@@ -203,51 +203,30 @@ module "rabbitmq_instance" {
 
 ### AI SERVER INSTANCE ###
 module "ai_server_instance" {
-  source        = "./vm"
-  instance_name = "${var.project_name}-${terraform.workspace}-ai-server"
-  is_spot       = true
-  zone          = var.zone
-  network       = module.vpc.network_name
-  sub_network   = module.vpc.private_subnet_name
-  tags          = ["allow-ssh", "private-subnet", "private-access", "public-access", "backend-service"]
-  region        = var.region
-  network_id    = module.vpc.network_id
-  project_id    = var.project_id
+  source                 = "./vm"
+  instance_creation_mode = "managed_group"
+  instance_name          = "${var.project_name}-${terraform.workspace}-ai-server"
+  is_spot                = true
+  zone                   = var.zone
+  network                = module.vpc.network_name
+  sub_network            = module.vpc.private_subnet_name
+  tags                   = ["allow-ssh", "private-subnet", "private-access", "public-access", "backend-service"]
+  region                 = var.region
+  network_id             = module.vpc.network_id
+  project_id             = var.project_id
   startup_script = templatefile("${path.module}/scripts/ai-server/startup.sh.tpl", {
     REGION                 = var.region
-    NGINX_CONTENT          = local.ai_server.nginx_conf_content
+    NGINX_CONTENT          = base64decode(local.ai_server.nginx_conf_content)
     DOCKER_COMPOSE_CONTENT = local.ai_server.docker_compose_conf_content
     PROJECT_NAME           = var.project_name
     ENVIROMENT             = terraform.workspace
+    BUCKET_NAME            = module.ai_model_storage.bucket_name
   })
 
-  depends_on = [google_compute_route.private_to_nat]
+  depends_on         = [google_compute_route.private_to_nat]
+  replace_trigger_by = module.secrets.secrets_data
 }
 
-
-### NAT INSTANCE #####
-
-# resource "google_compute_firewall" "nat_firewall" {
-#   name    = "allow-nat"
-#   network = module.vpc.network_name
-
-#   allow {
-#     protocol = "tcp"
-#     ports    = ["22"] # Allow SSH
-#   }
-
-#   allow {
-#     protocol = "udp"
-#     ports    = ["53"] # Allow DNS
-#   }
-
-#   allow {
-#     protocol = "tcp"
-#     ports    = ["80", "443"] # Allow HTTP/HTTPS
-#   }
-
-#   source_ranges = ["0.0.0.0/0"] # Modify for security as needed
-# }
 module "backend_instances" {
   source                 = "./vm"
   instance_creation_mode = "managed_group"
@@ -265,11 +244,12 @@ module "backend_instances" {
     DOCKER_COMPOSE_CONTENT = local.api_server.docker_compose_conf_content
     PROJECT_NAME           = var.project_name
     ENVIROMENT             = terraform.workspace
-    NGINX_CONTENT          = local.api_server.nginx_conf_content
+    NGINX_CONTENT          = base64decode(local.api_server.nginx_conf_content)
   })
   replace_trigger_by = module.secrets.secrets_data
 }
 
+### NAT INSTANCE #####
 resource "google_compute_address" "nat_instance" {
   name   = "nat-instance"
   region = var.region
@@ -371,50 +351,14 @@ module "pg" {
 
 
 module "load_balance" {
-  source       = "./load-balance"
-  project_id   = var.project_id
-  project_name = var.project_name
-  # neg_id       = module.cloudrun_backend.neg_id
+  source         = "./load-balance"
+  project_id     = var.project_id
+  project_name   = var.project_name
   instance_group = module.backend_instances.instance_group
   domain_name    = var.domain_name
   depends_on     = [module.backend_instances]
 }
 
-# resource "google_pubsub_topic" "billing_report_topic" {
-#   name = "daily-billing-report"
-# }
-
-
-# resource "google_storage_bucket" "function_bucket" {
-#   name     = "${var.project_id}-functions"
-#   location = "US"
-# }
-
-# resource "google_cloudfunctions_function" "billing_report_function" {
-#   name        = "daily-billing-report-function"
-#   description = "Sends daily billing reports"
-#   runtime     = "python310" # Adjust based on your code
-
-#   available_memory_mb   = 128
-#   source_archive_bucket = google_storage_bucket.function_bucket.name
-#   source_archive_object = google_storage_bucket_object.function_code.name
-#   entry_point           = "send_daily_billing_report"
-
-#   event_trigger {
-#     event_type = "google.pubsub.topic.publish"
-#     resource   = google_pubsub_topic.billing_report_topic.id
-#   }
-
-#   environment_variables = {
-#     PROJECT_ID = var.project_id
-#   }
-# }
-
-# resource "google_storage_bucket_object" "function_code" {
-#   name   = "function-source.zip"
-#   bucket = google_storage_bucket.function_bucket.name
-#   source = "path/to/function-source.zip" # Path to your function code
-# }
 
 module "dns_public_zone" {
   source  = "terraform-google-modules/cloud-dns/google"

@@ -4,7 +4,9 @@ resource "random_string" "random" {
   special = false
   upper   = false
   keepers = {
-    first = var.force_recreate ? "${timestamp()}" : null
+    first              = var.force_recreate ? "${timestamp()}" : null
+    startup_script     = var.startup_script # Add this to track startup script changes
+    replace_trigger_by = md5(jsonencode(var.replace_trigger_by))
   }
 }
 
@@ -33,8 +35,6 @@ resource "google_project_iam_custom_role" "artifact_reader_role" {
     "storage.managedFolders.list",
     "storage.objects.get",
     "storage.objects.list",
-    "secretmanager.secrets.list",
-    "secretmanager.versions.access",
     "storage.objects.create",
     "storage.folders.create",
     "storage.managedFolders.create",
@@ -42,6 +42,8 @@ resource "google_project_iam_custom_role" "artifact_reader_role" {
     "storage.multipartUploads.abort",
     "storage.multipartUploads.listParts",
     "storage.buckets.get",
+    "secretmanager.secrets.list",
+    "secretmanager.versions.access",
     "logging.logEntries.create",
     "logging.logEntries.route"
   ]
@@ -52,7 +54,6 @@ resource "google_project_iam_member" "artifact_reader_binding" {
   project = var.project_id
   role    = google_project_iam_custom_role.artifact_reader_role.id
   member  = "serviceAccount:${google_service_account.artifact_reader.email}"
-
 }
 
 # Managed Instance Group Template
@@ -91,12 +92,13 @@ resource "google_compute_instance_template" "template" {
   }
 
   labels = {
-    environment = terraform.workspace
-    managed_by  = "terraform"
+    environment         = terraform.workspace
+    managed_by          = "terraform"
+    startup_script_hash = md5(var.startup_script)
   }
 
   lifecycle {
-    create_before_destroy = false
+    create_before_destroy = true
   }
 }
 
@@ -176,8 +178,11 @@ resource "google_compute_instance" "single_instance" {
   }
 
   labels = {
-    environment = terraform.workspace
-    managed_by  = "terraform"
+    environment         = terraform.workspace
+    managed_by          = "terraform"
+    startup_script_hash = md5(var.startup_script)
   }
-
+  lifecycle {
+    create_before_destroy = true
+  }
 }

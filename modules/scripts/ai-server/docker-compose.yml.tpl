@@ -11,6 +11,8 @@ services:
       - MESSAGE_BROKER_VHOST=${RABBITMQ_VHOST}
     logging:
       driver: gcplogs
+    volumes:
+      - /etc/docker/model.pth:/app/model.pth
 
   nginx-proxy:
     image: nginx:latest
