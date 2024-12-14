@@ -23,6 +23,7 @@ locals {
     "message_broker_vhost"    = var.rabbitmq_vhost
     "github-client-id"        = var.github_client_id
     "github-secret"           = var.github_secret
+    "ai-server-name"          = "${var.project_name}_${terraform.workspace}_ai_server"
   }
 }
 

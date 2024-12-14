@@ -31,13 +31,13 @@ module "gce-lb-http" {
       protocol                        = "HTTP"
       port                            = 80
       port_name                       = "http"
-      timeout_sec                     = 10
+      timeout_sec                     = 60
       enable_cdn                      = false
       custom_request_headers          = []
       custom_response_headers         = []
       security_policy                 = null
       connection_draining_timeout_sec = 300
-      session_affinity                = "NONE"
+      session_affinity                = "CLIENT_IP"
       affinity_cookie_ttl_sec         = 0
       health_check = {
         check_interval_sec  = 30

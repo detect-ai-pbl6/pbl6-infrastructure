@@ -9,7 +9,6 @@ sudo apt-get install -y \
   ca-certificates \
   curl \
   gnupg \
-  yq \
   lsb-release
 
 # Add Docker's official GPG key
@@ -24,7 +23,10 @@ echo \
 sudo apt-get update
 
 # Install Docker Engine
+
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+
+sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && sudo chmod +x /usr/bin/yq
 
 gcloud auth configure-docker --quiet
 gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
