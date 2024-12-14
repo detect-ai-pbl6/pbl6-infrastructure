@@ -7,6 +7,7 @@ resource "random_string" "random" {
     first              = var.force_recreate ? "${timestamp()}" : null
     startup_script     = var.startup_script # Add this to track startup script changes
     replace_trigger_by = md5(jsonencode(var.replace_trigger_by))
+    machine_type       = var.machine_type
   }
 }
 
@@ -61,7 +62,7 @@ resource "google_compute_instance_template" "template" {
   count = contains(["managed_group", "mixed"], var.instance_creation_mode) ? 1 : 0
 
   name         = "${var.instance_name}-template-${random_string.random[0].result}"
-  machine_type = "e2-micro"
+  machine_type = var.machine_type
 
   disk {
     auto_delete  = true
@@ -98,7 +99,7 @@ resource "google_compute_instance_template" "template" {
   }
 
   lifecycle {
-    create_before_destroy = true
+    create_before_destroy = false
   }
 }
 
@@ -122,7 +123,7 @@ resource "google_compute_instance_group_manager" "group" {
   }
 
   lifecycle {
-    create_before_destroy = true
+    create_before_destroy = false
   }
 }
 
@@ -146,7 +147,7 @@ resource "google_compute_instance" "single_instance" {
   count = contains(["single", "mixed"], var.instance_creation_mode) ? 1 : 0
 
   name                      = "${var.instance_name}-${random_string.random[0].result}"
-  machine_type              = "e2-micro"
+  machine_type              = var.machine_type
   zone                      = var.zone
   allow_stopping_for_update = true
 
@@ -183,6 +184,6 @@ resource "google_compute_instance" "single_instance" {
     startup_script_hash = md5(var.startup_script)
   }
   lifecycle {
-    create_before_destroy = true
+    create_before_destroy = false
   }
 }
