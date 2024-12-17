@@ -1,23 +1,29 @@
 variable "project_name" {
-  type    = string
-  default = "pbl6"
+  type        = string
+  description = "Name of the Google Cloud project being configured"
 }
+
+variable "project_number" {
+  type        = string
+  description = "Number of the Google Cloud project being configured"
+}
+
 variable "bucket_name" {
-  default = "tf-state-bucket"
+  type        = string
+  description = "Name of the Google Cloud Storage bucket used for storing Terraform state files"
 }
 
 variable "project_id" {
   type        = string
-  description = "project id"
-  default     = "pbl6-439109"
+  description = "Unique identifier of the Google Cloud project"
 }
 
 variable "region" {
   type        = string
-  description = "value"
-  default     = "asia-southeast1"
+  description = "Google Cloud region where resources will be deployed (e.g., us-central1, europe-west1)"
 }
+
 variable "zone" {
-  type    = string
-  default = "asia-southeast1-a"
+  type        = string
+  description = "Specific Google Cloud zone within the selected region (e.g., us-central1-a, europe-west1-b)"
 }

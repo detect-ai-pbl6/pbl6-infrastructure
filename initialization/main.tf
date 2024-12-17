@@ -1,40 +1,39 @@
-# Create service account
-resource "google_service_account" "storage_account" {
-  account_id   = "${var.project_name}-${terraform.workspace}-storage-sa"
-  display_name = "Storage Service Account for ${var.project_name}"
-  description  = "Service account for accessing encrypted storage bucket"
+resource "google_project_service" "cloud_kms" {
+  project                    = var.project_id
+  service                    = "cloudkms.googleapis.com"
+  disable_dependent_services = true
+  disable_on_destroy         = true
+
 }
 
-# Grant service account access to storage bucket
-resource "google_storage_bucket_iam_member" "storage_admin" {
-  bucket = google_storage_bucket.default.name
-  role   = "roles/storage.admin"
-  member = "serviceAccount:${google_service_account.storage_account.email}"
+resource "random_string" "random" {
+  length  = 4
+  special = false
+  upper   = false
+}
+locals {
+  cloud_storage_service_account = "service-${data.google_project.current.number}@gs-project-accounts.iam.gserviceaccount.com"
 }
 
-# Grant service account access to KMS
-resource "google_kms_key_ring_iam_member" "key_ring_access" {
-  key_ring_id = google_kms_key_ring.key_ring.id
-  role        = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  member      = "serviceAccount:${google_service_account.storage_account.email}"
+data "google_project" "current" {
+  project_id = var.project_id
 }
-
-# Grant Cloud Storage Service Account access to KMS
-resource "google_kms_crypto_key_iam_member" "crypto_key_access" {
-  crypto_key_id = google_kms_crypto_key.crypto_key.id
-  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  member        = "serviceAccount:service-${data.google_project.current.number}@gs-project-accounts.iam.gserviceaccount.com"
-}
-
-# Get project information
-data "google_project" "current" {}
 
 # KMS Key Ring
 resource "google_kms_key_ring" "key_ring" {
-  name     = "${var.project_name}-${terraform.workspace}-tfstate-key-ring"
+  name     = "${var.project_name}-${terraform.workspace}-tfstate-key-ring-${random_string.random.result}"
   location = var.region
+
+  depends_on = [google_project_service.cloud_kms]
 }
 
+resource "google_project_iam_binding" "project" {
+  project = data.google_project.current.id
+  role    = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  members = [
+    "serviceAccount:${local.cloud_storage_service_account}",
+  ]
+}
 # KMS Crypto Key
 resource "google_kms_crypto_key" "crypto_key" {
   name            = "${var.project_name}-${terraform.workspace}-tfstate-crypto-key"
@@ -42,13 +41,14 @@ resource "google_kms_crypto_key" "crypto_key" {
   rotation_period = "7776000s" # 90 days
 
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
   }
+  depends_on = [google_project_service.cloud_kms]
 }
 
 # Storage Bucket
 resource "google_storage_bucket" "default" {
-  name          = "${var.project_name}-${terraform.workspace}-${var.bucket_name}"
+  name          = "${var.project_name}-${terraform.workspace}-${var.bucket_name}-${random_string.random.result}"
   force_destroy = true
   location      = var.region
   storage_class = "STANDARD"
@@ -64,9 +64,7 @@ resource "google_storage_bucket" "default" {
   }
 
   # Add dependency to ensure KMS permissions are set before bucket creation
-  depends_on = [
-    google_kms_crypto_key_iam_member.crypto_key_access
-  ]
+  depends_on = [google_project_iam_binding.project]
 }
 
 resource "local_file" "default" {
