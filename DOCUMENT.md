@@ -21,8 +21,8 @@ No requirements.
 | <a name="module_backend_instances"></a> [backend\_instances](#module\_backend\_instances) | ./vm | n/a |
 | <a name="module_backend_server_image_registry"></a> [backend\_server\_image\_registry](#module\_backend\_server\_image\_registry) | GoogleCloudPlatform/artifact-registry/google | ~> 0.3 |
 | <a name="module_dns_public_zone"></a> [dns\_public\_zone](#module\_dns\_public\_zone) | terraform-google-modules/cloud-dns/google | ~> 5.0 |
+| <a name="module_images_storage"></a> [images\_storage](#module\_images\_storage) | ./storage | n/a |
 | <a name="module_load_balance"></a> [load\_balance](#module\_load\_balance) | ./load-balance | n/a |
-| <a name="module_media_storage"></a> [media\_storage](#module\_media\_storage) | ./storage | n/a |
 | <a name="module_nat_instance"></a> [nat\_instance](#module\_nat\_instance) | ./nat-instance | n/a |
 | <a name="module_pg"></a> [pg](#module\_pg) | terraform-google-modules/sql-db/google//modules/postgresql | ~> 22.1 |
 | <a name="module_rabbitmq_instance"></a> [rabbitmq\_instance](#module\_rabbitmq\_instance) | ./vm | n/a |
@@ -40,8 +40,10 @@ No requirements.
 | [google_compute_firewall.allow_ssh](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_firewall) | resource |
 | [google_compute_global_address.private_ip_address](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_global_address) | resource |
 | [google_compute_route.private_to_nat](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_route) | resource |
-| [google_project_iam_member.storage_roles](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/project_iam_member) | resource |
-| [google_service_account.storage_account](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/service_account) | resource |
+| [google_project_iam_member.github_action_sa_role](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/project_iam_member) | resource |
+| [google_project_iam_member.github_actions_tf_sa_role](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/project_iam_member) | resource |
+| [google_service_account.github_action_sa](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/service_account) | resource |
+| [google_service_account.github_actions_tf_sa](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/service_account) | resource |
 | [google_service_networking_connection.private_vpc_connection](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/service_networking_connection) | resource |
 | [random_string.random](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/string) | resource |
 
