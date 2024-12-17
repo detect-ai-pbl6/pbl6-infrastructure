@@ -161,3 +161,10 @@ variable "replace_trigger_by" {
   type        = any
   default     = ""
 }
+
+
+variable "health_check_request_path" {
+  description = "Set of references to any other resources which when changed cause this resource to be proposed for replacement"
+  type        = string
+  default     = "/api/health"
+}

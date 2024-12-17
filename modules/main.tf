@@ -225,8 +225,9 @@ module "ai_server_instance" {
     BUCKET_NAME            = module.ai_model_storage.bucket_name
   })
 
-  depends_on         = [google_compute_route.private_to_nat]
-  replace_trigger_by = module.secrets.secrets_data
+  depends_on                = [google_compute_route.private_to_nat]
+  replace_trigger_by        = module.secrets.secrets_data
+  health_check_request_path = "/health"
 }
 
 
