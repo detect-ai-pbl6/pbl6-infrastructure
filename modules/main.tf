@@ -183,6 +183,7 @@ resource "google_compute_firewall" "allow_all_private_subnet_to_public_subnet" {
 module "rabbitmq_instance" {
   source        = "./vm"
   instance_name = "${var.project_name}-${terraform.workspace}-rabbitmq"
+  machine_type  = "e2-custom-small-1536"
   is_spot       = false
   zone          = var.zone
   network       = module.vpc.network_name
@@ -207,6 +208,7 @@ module "ai_server_instance" {
   instance_creation_mode = "managed_group"
   instance_name          = "${var.project_name}-${terraform.workspace}-ai-server"
   is_spot                = true
+  machine_type           = "e2-custom-small-1536"
   zone                   = var.zone
   network                = module.vpc.network_name
   sub_network            = module.vpc.private_subnet_name
@@ -223,15 +225,20 @@ module "ai_server_instance" {
     BUCKET_NAME            = module.ai_model_storage.bucket_name
   })
 
-  depends_on         = [google_compute_route.private_to_nat]
-  replace_trigger_by = module.secrets.secrets_data
+  depends_on                = [google_compute_route.private_to_nat]
+  replace_trigger_by        = module.secrets.secrets_data
+  health_check_request_path = "/health"
 }
+
+
+### API SERVER INSTANCE ###
 
 module "backend_instances" {
   source                 = "./vm"
   instance_creation_mode = "managed_group"
   instance_name          = "${var.project_name}-${terraform.workspace}-backend"
   is_spot                = true
+  machine_type           = "e2-custom-small-1280"
   zone                   = var.zone
   network                = module.vpc.network_name
   sub_network            = module.vpc.private_subnet_name
@@ -358,6 +365,7 @@ module "load_balance" {
   domain_name    = var.domain_name
   depends_on     = [module.backend_instances]
 }
+
 
 
 module "dns_public_zone" {

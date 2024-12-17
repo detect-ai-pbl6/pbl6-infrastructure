@@ -12,6 +12,7 @@ sudo apt-get install -y \
   lsb-release
 
 # Add Docker's official GPG key
+
 curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 
 # Set up Docker repository
@@ -26,9 +27,9 @@ sudo apt-get update
 # Install Docker Engine
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 
-sudo docker run --log-driver=gcplogs -d --hostname my-rabbit --name some-rabbit \
+sudo docker run --log-driver=gcplogs -d \
   -e RABBITMQ_DEFAULT_USER=${RABBITMQ_USERNAME} \
   -e RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD} \
   -e RABBITMQ_DEFAULT_VHOST=${RABBITMQ_VHOST} \
   -p 5672:5672 -p 15672:15672 \
-  rabbitmq:management
+  rabbitmq:4.0-management

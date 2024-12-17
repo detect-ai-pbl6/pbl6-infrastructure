@@ -3,7 +3,8 @@ events {
 }
 
 http {
-
+    server_tokens off;
+    
     server {
         listen 80;
 
