@@ -28,23 +28,44 @@ resource "random_string" "random" {
   special = false
   upper   = false
 }
-resource "google_service_account" "storage_account" {
-  account_id   = "${var.project_name}-${terraform.workspace}-sa-id"
-  display_name = "${var.project_name}-${terraform.workspace}-sa"
-  description  = "Service Account with full storage access"
+
+### Service account for Github Actions ###
+resource "google_service_account" "github_action_sa" {
+  account_id   = "github-actions-sa"
+  display_name = "Service Account for Github Action"
+  project      = var.project_id
 }
 
-# Grant storage roles
-resource "google_project_iam_member" "storage_roles" {
+resource "google_project_iam_member" "github_action_sa_role" {
   for_each = toset([
-    "roles/storage.admin",
     "roles/artifactregistry.reader",
-    "roles/artifactregistry.writer"
+    "roles/artifactregistry.writer",
+    "roles/iam.serviceAccountUser",
+    "roles/iam.serviceAccountTokenCreator",
+    "roles/compute.instanceAdmin.v1",
+    "roles/iap.tunnelResourceAccessor"
   ])
 
   project = var.project_id
   role    = each.value
-  member  = "serviceAccount:${google_service_account.storage_account.email}"
+  member  = "serviceAccount:${google_service_account.github_action_sa.email}"
+}
+
+resource "google_service_account" "github_actions_tf_sa" {
+  account_id   = "github-actions-tf-sa"
+  display_name = "Service Account for Github Action"
+  project      = var.project_id
+}
+
+resource "google_project_iam_member" "github_actions_tf_sa_role" {
+  for_each = toset([
+    "roles/editor",
+    "roles/secretmanager.secretAccessor"
+  ])
+
+  project = var.project_id
+  role    = each.value
+  member  = "serviceAccount:${google_service_account.github_actions_tf_sa.email}"
 }
 
 module "available-services" {
@@ -52,12 +73,14 @@ module "available-services" {
   project_id = var.project_id
 }
 
-module "media_storage" {
+module "images_storage" {
   source               = "./storage"
-  bucket_name          = "media-bucket"
+  bucket_name          = "images-bucket"
   region               = var.region
   project_name         = var.project_name
   allowed_cors_origins = ["*"]
+
+  depends_on = [module.available-services]
 }
 
 module "ai_model_storage" {
@@ -66,6 +89,8 @@ module "ai_model_storage" {
   region       = var.region
   project_name = var.project_name
   versioning   = true
+
+  depends_on = [module.available-services]
 }
 
 module "backend_server_image_registry" {
@@ -76,6 +101,9 @@ module "backend_server_image_registry" {
   location      = var.region
   format        = "DOCKER"
   repository_id = "${var.project_name}-${terraform.workspace}-backend-image-registry"
+
+  depends_on = [module.available-services]
+
 }
 
 module "ai_server_image_registry" {
@@ -86,6 +114,9 @@ module "ai_server_image_registry" {
   location      = var.region
   format        = "DOCKER"
   repository_id = "${var.project_name}-${terraform.workspace}-ai-server-image-registry"
+
+  depends_on = [module.available-services]
+
 }
 
 module "vpc" {
@@ -93,6 +124,8 @@ module "vpc" {
   region       = var.region
   project_name = var.project_name
   project_id   = var.project_id
+
+  depends_on = [module.available-services]
 }
 
 # Allow IAP conenct to resource
@@ -198,7 +231,7 @@ module "rabbitmq_instance" {
     RABBITMQ_VHOST    = var.rabbitmq_vhost
   })
 
-  depends_on = [google_compute_route.private_to_nat]
+  depends_on = [google_compute_route.private_to_nat, module.available-services]
 
 }
 
@@ -225,13 +258,13 @@ module "ai_server_instance" {
     BUCKET_NAME            = module.ai_model_storage.bucket_name
   })
 
-  depends_on                = [google_compute_route.private_to_nat]
+  depends_on                = [google_compute_route.private_to_nat, module.secrets]
   replace_trigger_by        = module.secrets.secrets_data
   health_check_request_path = "/health"
 }
 
 
-### API SERVER INSTANCE ###
+# ### API SERVER INSTANCE ###
 
 module "backend_instances" {
   source                 = "./vm"
@@ -254,12 +287,16 @@ module "backend_instances" {
     NGINX_CONTENT          = base64decode(local.api_server.nginx_conf_content)
   })
   replace_trigger_by = module.secrets.secrets_data
+  depends_on         = [module.secrets]
 }
 
-### NAT INSTANCE #####
+# ### NAT INSTANCE #####
 resource "google_compute_address" "nat_instance" {
   name   = "nat-instance"
   region = var.region
+
+  depends_on = [module.available-services]
+
 }
 
 module "nat_instance" {
@@ -272,6 +309,8 @@ module "nat_instance" {
   disk_type      = "pd-standard"
   machine_type   = "e2-micro"
   route_priority = 900
+
+  depends_on = [module.available-services]
 }
 
 resource "google_compute_route" "private_to_nat" {
@@ -304,6 +343,9 @@ resource "google_service_networking_connection" "private_vpc_connection" {
   network                 = module.vpc.network_name
   service                 = "servicenetworking.googleapis.com"
   reserved_peering_ranges = [google_compute_global_address.private_ip_address.name]
+  deletion_policy         = "ABANDON"
+
+  depends_on = [module.available-services]
 }
 
 module "pg" {
@@ -322,6 +364,7 @@ module "pg" {
   maintenance_window_day          = 7
   maintenance_window_hour         = 12
   maintenance_window_update_track = "stable"
+  edition                         = "ENTERPRISE"
 
   deletion_protection = false
 
@@ -418,7 +461,7 @@ module "secrets" {
   superuser_password = var.superuser_password
 
   admin_origin = var.admin_origin
-  bucket_name  = module.media_storage.bucket_name
+  bucket_name  = module.images_storage.bucket_name
 
   rabbitmq_host     = module.rabbitmq_instance.instance_ip
   rabbitmq_username = var.rabbitmq_username
@@ -428,5 +471,5 @@ module "secrets" {
   github_client_id = var.github_client_id
   github_secret    = var.github_secret
 
-  depends_on = [module.pg]
+  depends_on = [module.pg, module.available-services]
 }

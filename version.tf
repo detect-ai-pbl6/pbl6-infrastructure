@@ -2,7 +2,7 @@ terraform {
   required_version = ">= 1.3.0"
 
   backend "gcs" {
-    bucket = "pbl6-dev-tf-state-bucket"
+    bucket = "pbl6-dev-tf-state-bucket-hxot"
     prefix = "tstatic.tfstate.d"
   }
   required_providers {
