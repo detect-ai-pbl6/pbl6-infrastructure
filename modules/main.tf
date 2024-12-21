@@ -240,7 +240,7 @@ module "ai_server_instance" {
   source                 = "./vm"
   instance_creation_mode = "managed_group"
   instance_name          = "${var.project_name}-${terraform.workspace}-ai-server"
-  is_spot                = true
+  is_spot                = false
   machine_type           = "e2-custom-small-1536"
   zone                   = var.zone
   network                = module.vpc.network_name
@@ -270,7 +270,7 @@ module "backend_instances" {
   source                 = "./vm"
   instance_creation_mode = "managed_group"
   instance_name          = "${var.project_name}-${terraform.workspace}-backend"
-  is_spot                = true
+  is_spot                = false
   machine_type           = "e2-custom-small-1280"
   zone                   = var.zone
   network                = module.vpc.network_name
