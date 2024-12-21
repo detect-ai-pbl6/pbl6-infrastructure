@@ -111,7 +111,7 @@ resource "google_compute_http_health_check" "default" {
   count               = contains(["managed_group", "mixed"], var.instance_creation_mode) ? 1 : 0
   name                = "${var.instance_name}-health-check-${random_string.random[0].result}"
   timeout_sec         = 10
-  check_interval_sec  = 30
+  check_interval_sec  = 60
   healthy_threshold   = 3
   unhealthy_threshold = 10
   port                = 80
