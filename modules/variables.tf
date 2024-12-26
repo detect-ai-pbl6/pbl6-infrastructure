@@ -36,6 +36,7 @@ variable "db_name" {
 variable "db_password" {
   type        = string
   description = "The password associated with the database user."
+  sensitive   = true
 }
 
 variable "secret_key" {
