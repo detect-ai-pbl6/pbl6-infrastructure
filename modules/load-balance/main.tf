@@ -40,10 +40,10 @@ module "gce-lb-http" {
       session_affinity                = "CLIENT_IP"
       affinity_cookie_ttl_sec         = 0
       health_check = {
-        check_interval_sec  = 30
+        check_interval_sec  = 45
         timeout_sec         = 10
         healthy_threshold   = 2
-        unhealthy_threshold = 8
+        unhealthy_threshold = 10
         request_path        = "/api/health"
         port                = 80
         logging             = true

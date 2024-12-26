@@ -55,10 +55,6 @@ jobs:
               env:
                   GOOGLE_CREDENTIALS: ${{ env.GOOGLE_CREDENTIALS }}
 
-            - name: Terraform Plan
-              run: terraform plan -input=false
-              env:
-                  GOOGLE_CREDENTIALS: ${{ env.GOOGLE_CREDENTIALS }}
             - name: Terraform Apply
               run: terraform apply -auto-approve -input=false
               env:

@@ -1,28 +1,3 @@
-locals {
-  ai_server = {
-    docker_compose_conf_content = templatefile("${path.module}/scripts/ai-server/docker-compose.yml.tpl", {
-      REGION              = var.region
-      PROJECT_ID          = var.project_id
-      ARTIFACT_REPOSITORY = module.ai_server_image_registry.artifact_name
-      IMAGE_NAME          = "dev-ai-server"
-      RABBITMQ_HOST       = module.rabbitmq_instance.instance_ip
-      RABBITMQ_PASSWORD   = var.rabbitmq_password
-      RABBITMQ_USERNAME   = var.rabbitmq_username
-      RABBITMQ_VHOST      = var.rabbitmq_vhost
-    })
-    nginx_conf_content = filebase64("${path.module}/scripts/ai-server/nginx.conf.tpl")
-  }
-  api_server = {
-    docker_compose_conf_content = templatefile("${path.module}/scripts/api-server/docker-compose.yml.tpl", {
-      REGION              = var.region
-      PROJECT_ID          = var.project_id
-      ARTIFACT_REPOSITORY = module.backend_server_image_registry.artifact_name
-      IMAGE_NAME          = "dev-backend-image"
-    })
-    nginx_conf_content = filebase64("${path.module}/scripts/api-server/nginx.conf.tpl")
-  }
-}
-
 resource "random_string" "random" {
   length  = 4
   special = false
@@ -43,7 +18,8 @@ resource "google_project_iam_member" "github_action_sa_role" {
     "roles/iam.serviceAccountUser",
     "roles/iam.serviceAccountTokenCreator",
     "roles/compute.instanceAdmin.v1",
-    "roles/iap.tunnelResourceAccessor"
+    "roles/iap.tunnelResourceAccessor",
+    "roles/secretmanager.viewer"
   ])
 
   project = var.project_id
@@ -240,8 +216,8 @@ module "ai_server_instance" {
   source                 = "./vm"
   instance_creation_mode = "managed_group"
   instance_name          = "${var.project_name}-${terraform.workspace}-ai-server"
-  is_spot                = true
-  machine_type           = "e2-custom-small-1536"
+  is_spot                = false
+  machine_type           = "e2-custom-small-2048"
   zone                   = var.zone
   network                = module.vpc.network_name
   sub_network            = module.vpc.private_subnet_name
@@ -264,13 +240,13 @@ module "ai_server_instance" {
 }
 
 
-# ### API SERVER INSTANCE ###
+### API SERVER INSTANCE ###
 
 module "backend_instances" {
   source                 = "./vm"
   instance_creation_mode = "managed_group"
   instance_name          = "${var.project_name}-${terraform.workspace}-backend"
-  is_spot                = true
+  is_spot                = false
   machine_type           = "e2-custom-small-1280"
   zone                   = var.zone
   network                = module.vpc.network_name
@@ -290,7 +266,7 @@ module "backend_instances" {
   depends_on         = [module.secrets]
 }
 
-# ### NAT INSTANCE #####
+##### NAT INSTANCE #####
 resource "google_compute_address" "nat_instance" {
   name   = "nat-instance"
   region = var.region
@@ -376,6 +352,11 @@ module "pg" {
     private_network = "projects/${var.project_id}/global/networks/${module.vpc.network_name}"
 
     allocated_ip_range = null
+  }
+
+  insights_config = {
+    query_plans_per_minute = 5
+    query_string_length    = 1024
   }
 
   backup_configuration = {
