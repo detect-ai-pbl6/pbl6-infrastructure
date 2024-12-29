@@ -1,0 +1,40 @@
+project_id = ""
+region     = "asia-southeast1"
+zone       = "asia-southeast1-a"
+project_name = ""
+
+db_tier     = "db-f1-micro"
+db_name     = ""
+db_user     = ""
+db_password = ""
+
+secret_key           = ""
+cors_allowed_origins = ""
+csrf_trusted_origins = ""
+domain_name          = ""
+
+private_key = <<EOT
+-----BEGIN RSA PRIVATE KEY-----
+-----END RSA PRIVATE KEY-----
+EOT
+
+public_key = <<EOT
+-----BEGIN PUBLIC KEY-----
+-----END PUBLIC KEY-----
+EOT
+
+gcp_client_id = ""
+gcp_secret    = ""
+
+superuser_email    = ""
+superuser_password = ""
+admin_origin       = "
+
+rabbitmq_password = ""
+rabbitmq_username = ""
+rabbitmq_vhost    = ""
+
+
+github_client_id = ""
+github_secret    = ""
+# ai_server_name   = "pbl6_{env}_ai_server"
