@@ -2,6 +2,11 @@
 
 This repository contains Terraform configurations to set up Google Cloud Platform (GCP) infrastructure. The setup is divided into two main parts: initialization and main module deployment.
 
+## Infrastructure Overview
+
+Below is an overview of the infrastructure set up using this repository:
+![infrastructure](static/infrastructure.svg)
+
 ## Prerequisites
 
 - [Google Cloud CLI](https://cloud.google.com/sdk/docs/install)
@@ -40,9 +45,9 @@ bucket_name     = "your-bucket-name"
 3. Apply the initialization configuration:
 ```bash
 # For first time run
+terraform init
 terraform workspace select [env]
 terraform workspace new [env]
-terraform init
 
 terraform plan -var-file="dev.tfvars"
 terraform apply -var-file="dev.tfvars"
@@ -65,9 +70,9 @@ cd ..
 3. Deploy the main infrastructure:
 ```bash
 # For first time run
+terraform init
 terraform workspace select [env]
 terraform workspace new [env]
-terraform init
 
 terraform plan -var-file="dev.tfvars"
 terraform apply -var-file="dev.tfvars"
