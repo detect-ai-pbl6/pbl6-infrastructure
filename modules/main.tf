@@ -217,7 +217,7 @@ module "ai_server_instance" {
   instance_creation_mode = "managed_group"
   instance_name          = "${var.project_name}-${terraform.workspace}-ai-server"
   is_spot                = false
-  machine_type           = "e2-custom-small-2048"
+  machine_type           = "e2-custom-medium-2560"
   zone                   = var.zone
   network                = module.vpc.network_name
   sub_network            = module.vpc.private_subnet_name
